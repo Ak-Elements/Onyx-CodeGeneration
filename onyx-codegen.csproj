@@ -10,4 +10,27 @@
     <PublishTrimmed>True</PublishTrimmed>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="external\bin\tree-sitter-cpp.dll" />
+    <None Remove="external\bin\tree-sitter.dll" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="external\bin\tree-sitter-cpp.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="external\bin\tree-sitter.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="tree-sitter-cpp.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="tree-sitter.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
