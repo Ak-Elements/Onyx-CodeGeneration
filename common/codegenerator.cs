@@ -72,7 +72,7 @@ namespace onyx_codegen.common
         internal CodeScope EnterFunction(string scopeName)
         {
             Append(scopeName);
-            return new CodeScope(this, "(", ")");
+            return new CodeScope(this);
         }
 
         internal CodeScope EnterScopeNoBraces()
