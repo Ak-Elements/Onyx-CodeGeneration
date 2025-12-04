@@ -83,7 +83,7 @@ namespace onyx_codegen
                 }
             }
 
-            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.h"), generator.GetCode());
+            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.h"), generator.GetCode());
         }
 
         private void GenerateModuleCpp(string outputPath, IEnumerable<common.Type> allArguments, IEnumerable<common.Type> engineSystems, IEnumerable<common.Type> assets, IEnumerable<common.Type> serializers)
@@ -169,7 +169,7 @@ namespace onyx_codegen
                 }
             }
 
-            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.cpp"), generator.GetCode());
+            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.cpp"), generator.GetCode());
         }
 
         private void GenerateSystemsCode(CodeGenerator codeGenerator, IEnumerable<common.Type> engineSystems, out IReadOnlyList<common.Type> outSystemIncludes)

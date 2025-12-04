@@ -40,19 +40,23 @@ namespace onyx_codegen
             
             CodeGenerator codeGenerator = new CodeGenerator();
 
-            var includes = generatedModuleHeaderPaths.Select(includePath => $"#include <{PathExtension.GetShortestRelativePath(includeDirectories, includePath)}>");
-
             List<common.Type> outTypes;
             List<Function> globalFunctions;
-            IEnumerable<Function> allGlobalFunctions = Enumerable.Empty<Function>();            
+            List<string> includes = new List<string>();
+            IEnumerable<Function> allGlobalFunctions = Enumerable.Empty<Function>();
             foreach (var moduleHeaderPath in generatedModuleHeaderPaths)
             {
-                CppParser parser = new CppParser(includeDirectories);        
+                CppParser parser = new CppParser(includeDirectories);
                 parser.Parse(moduleHeaderPath, out globalFunctions, out outTypes);
                 allGlobalFunctions = allGlobalFunctions.Union(globalFunctions);
+
+                if (globalFunctions.Any())
+                {
+                    string moduleIncludePath = PathExtension.GetShortestRelativePath(includeDirectories, moduleHeaderPath).Replace('\\', '/'); ;
+                    includes.Add($"#include <{moduleIncludePath}>");
+                }
             }
 
-            codeGenerator.Append(includes);
             using (codeGenerator.EnterScope("namespace Onyx"))
             using (codeGenerator.EnterFunction("void Init()"))
             {
