@@ -25,7 +25,16 @@ namespace onyx_codegen
                 {
                     using (codeGenerator.EnterScope(scopeComment))
                     {
-                        codeGenerator.Append(functions.Select(function => function.Namespace + "::" + function.Name + "();"));
+                        foreach (var function in functions)
+                        {
+                            string fullyQualifiedName = function.Namespace + "::" + function.Name;
+                            if (fullyQualifiedName.StartsWith("Onyx::"))
+                            {
+                                fullyQualifiedName = fullyQualifiedName["Onyx::".Length..];
+                            }
+
+                            codeGenerator.Append(fullyQualifiedName);
+                        }
                     }
                 }
             }
@@ -60,8 +69,10 @@ namespace onyx_codegen
             var sortedIncludes = includes.OrderBy(s => s.Count(c => c == '/'))  // sort by folder depth
               .ThenBy(s => s)                                                   // sort alphabetical
               .Select(s => $"#include <{s}>");
-            codeGenerator.Append(sortedIncludes);
 
+            codeGenerator.Append(sortedIncludes);
+            codeGenerator.AppendLine();
+            
             using (codeGenerator.EnterScope("namespace Onyx"))
             using (codeGenerator.EnterFunction("void Init()"))
             {
