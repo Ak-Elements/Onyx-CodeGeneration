@@ -53,9 +53,14 @@ namespace onyx_codegen
                 if (globalFunctions.Any())
                 {
                     string moduleIncludePath = PathExtension.GetShortestRelativePath(includeDirectories, moduleHeaderPath).Replace('\\', '/'); ;
-                    includes.Add($"#include <{moduleIncludePath}>");
+                    includes.Add(moduleIncludePath);
                 }
             }
+
+            var sortedIncludes = includes.OrderBy(s => s.Count(c => c == '/'))  // sort by folder depth
+              .ThenBy(s => s)                                                   // sort alphabetical
+              .Select(s => $"#include <{s}>");
+            codeGenerator.Append(sortedIncludes);
 
             using (codeGenerator.EnterScope("namespace Onyx"))
             using (codeGenerator.EnterFunction("void Init()"))
