@@ -11,14 +11,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="external\bin\tree-sitter-cpp.dll">
+    <None Include="$(ProjectDir)external\bin\tree-sitter-cpp.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>tree-sitter-cpp.dll</Link>
     </None>
-    <None Include="external\bin\tree-sitter.dll">
+    <None Include="$(ProjectDir)external\bin\tree-sitter.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         <Link>tree-sitter.dll</Link>
     </None>
   </ItemGroup>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="call $(ProjectDir)external/build_tree_sitter.bat" />
+  </Target>
 
 </Project>
