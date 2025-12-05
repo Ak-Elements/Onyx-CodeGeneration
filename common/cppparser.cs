@@ -98,18 +98,47 @@ namespace onyx_codegen.common
                     break;
                 case "class_specifier":
                 case "struct_specifier":
-                    ExtractType(cursor, sym == "class_specifier" ? "class" : "struct", outTypes, localNamespaceStack);
-                    return;
-                case "template_declaration":
-                    if (IsFullySpecializedTemplate(cursor) == false)
+                {
+                    Type newType = new Type();
+                    if (ExtractType(cursor, sym == "class_specifier" ? "class" : "struct", ref newType, localNamespaceStack))
                     {
+                        outTypes.Add(newType);
+                    }
+                    return;
+                }
+                case "template_declaration":
+                {
+                    var templateParameters = GetTemplateParameters(cursor);
+                    if (templateParameters.Any())
+                    {
+                        TemplateType templateType = new TemplateType();
+                        templateType.TemplateParameters = templateParameters.ToList();
+                        foreach (var child in cursor.children())
+                        {
+                            switch (child.current_symbol())
+                            {
+                                case "class_specifier":
+                                case "struct_specifier":
+                                    var newType = templateType as Type;
+                                    if (ExtractType(cursor, child.current_symbol() == "class_specifier" ? "template class" : "template struct", ref newType, localNamespaceStack))
+                                    {
+                                        outTypes.Add(newType);
+                                    }
+                                    break;
+                            }
+                        }
                         return;
                     }
                     break;
+                }
                 case "alias_declaration":
                 case "type_definition":
-                    ExtractAlias(cursor, outTypes, localNamespaceStack);
+                {
+                    var newType = new Type();
+                    ExtractAlias(cursor, ref newType, localNamespaceStack);
+                    outTypes.Add(newType);
                     break;
+                }
                 case "declaration_list":
                     List<Function> globalFunctions;
                     ExtractFunctionDefinitions(cursor, namespaceStack, out globalFunctions);
@@ -126,7 +155,7 @@ namespace onyx_codegen.common
             }
         }
 
-        private void ExtractAlias(TSCursor cursor, List<Type> outTypes, List<string> namespaceStack)
+        private void ExtractAlias(TSCursor cursor, ref Type outType, List<string> namespaceStack)
         {
             ReadOnlySpan<char> aliasName = "";
             ReadOnlySpan<char> alisedType = "";
@@ -149,14 +178,16 @@ namespace onyx_codegen.common
             string name = aliasName.ToString();
             string fullyQualifiedName = string.Join("::", namespaceStack);
             fullyQualifiedName = string.IsNullOrEmpty(fullyQualifiedName) ? name : fullyQualifiedName + "::" + name;
-            var newType = new Type(name, fullyQualifiedName, "alias", filePath);
-            newType.IsAliased = true;
-            newType.AliasedType = alisedType.ToString();
-            newType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
-            outTypes.Add(newType);
+            outType.Name = name;
+            outType.FullyQualifiedName = fullyQualifiedName;
+            outType.TypeIdentifier = "alias";
+            outType.AbsolutePath = filePath;
+            outType.IsAliased = true;
+            outType.AliasedType = alisedType.ToString();
+            outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
         }
 
-        void ExtractType(TSCursor cursor, string type, List<Type> outTypes, IReadOnlyList<string> currentNamespace)
+        bool ExtractType(TSCursor cursor, string type, ref Type outType, IReadOnlyList<string> currentNamespace)
         {
             ReadOnlySpan<char> className = "";
             bool isForwardDeclaration = true;
@@ -188,7 +219,9 @@ namespace onyx_codegen.common
                     // Extract inhertiance
                     foreach (var baseClassChild in cursor.children())
                     {
-                        if ((cursor.current_symbol() == "type_identifier") || (cursor.current_symbol() == "qualified_identifier"))
+                        if ((cursor.current_symbol() == "type_identifier") ||
+                            (cursor.current_symbol() == "qualified_identifier") ||
+                            (cursor.current_symbol() == "template_type"))
                         {
                             baseClasses.Add(GetNodeContent(cursor.current_node()).ToString());
                         }
@@ -207,18 +240,24 @@ namespace onyx_codegen.common
 
                 string fullyQualifiedName = string.Join("::", currentNamespace);
                 fullyQualifiedName = string.IsNullOrEmpty(fullyQualifiedName) ? name : fullyQualifiedName + "::" + name;
-                var newType = new Type(name, fullyQualifiedName, type, filePath);
-                newType.Inherits = baseClasses;
-                newType.HasTypeId = hasTypeId;
+                //var newType = new Type(name, fullyQualifiedName, type, filePath);
+                outType.Name = name;
+                outType.FullyQualifiedName = fullyQualifiedName;
+                outType.TypeIdentifier = type;
+                outType.AbsolutePath = filePath;
+                outType.Inherits = baseClasses;
+                outType.HasTypeId = hasTypeId;
 
                 if (functions.IsNullOrEmpty() == false)
                 {
-                    newType.Functions = functions;
+                    outType.Functions = functions;
                 }
                 
-                newType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath).Replace('\\', '/');
-                outTypes.Add(newType);
+                outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath).Replace('\\', '/');
+                return true;
             }
+
+            return false;
         }
 
         void ExtractFunctionDefinitions(TSCursor cursor, IReadOnlyList<string> currentNamespace, out List<Function> outFunctions)
@@ -340,21 +379,35 @@ namespace onyx_codegen.common
             return parameters;
         }
 
-
-        bool IsFullySpecializedTemplate(TSCursor cursor)
+        IEnumerable<string> GetTemplateParameters(TSCursor cursor)
         {
-            bool isFullySpecialized = false;
-
+            var parameters = new List<string>();
             foreach (var child in cursor.children())
             {
                 if (cursor.current_symbol() == "template_parameter_list")
                 {
-                    isFullySpecialized = cursor.current_node().child_count() == 2;
+                    foreach (var paramChild in child.children())
+                    {
+                        switch (paramChild.current_symbol())
+                        {
+                            case "type_parameter_declaration":
+                            case "parameter_declaration":
+                                var templateParam = GetNodeContent(paramChild.current_node()).ToString();
+                                if (templateParam.StartsWith("typename"))
+                                    templateParam = templateParam.Substring("typename".Count());
+                                parameters.Add(templateParam.Trim());
+                                break;
+                            default:
+                                //Console.WriteLine( "other:" + GetNodeContent(paramChild.current_node()).ToString());
+                                break;
+                        }
+                    }
+
                     break;
                 }
             }
 
-            return isFullySpecialized;
+            return parameters;
         }
     }
 }

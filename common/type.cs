@@ -8,27 +8,18 @@ namespace onyx_codegen.common
         private IReadOnlyList<Function> functions = new List<Function> ();
         private IReadOnlyList<string> inheritanceList = new List<string>();
 
-        public string Name { get; set; }
-        public string FullyQualifiedName { get; set; }
-        public string AbsolutePath { get; set; }
-        public string IncludePath { get; set; }
-        public string TypeIdentifier { get; set; } // class / struct /enum
+        public string Name { get; set; } = "";
+        public string FullyQualifiedName { get; set; } = "";
+        public string AbsolutePath { get; set; } = "";
+        public string IncludePath { get; set; } = "";
+        public string TypeIdentifier { get; set; } = ""; // class / struct /enum
 
-        public string? AliasedType { get; set; }
+        public string AliasedType { get; set; } = "";
         public bool IsAliased { get; set; }
         public bool IsAbstract { get; set; }
         public bool HasTypeId { get; set; }
         public IReadOnlyList<string> Inherits { get => inheritanceList; set => inheritanceList = value; }  
         public IReadOnlyList<Function> Functions { get => functions; set => functions = value; }
-
-        public Type(string name, string fullyQualfiedName, string type, string path)
-        {
-            Name = name;
-            FullyQualifiedName = fullyQualfiedName;
-            AbsolutePath = path;
-            IncludePath = path;
-            TypeIdentifier = type;
-        }
 
         public IEnumerable<Function> GetConstructors()
         {

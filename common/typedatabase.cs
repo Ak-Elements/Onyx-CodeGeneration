@@ -40,7 +40,7 @@ namespace onyx_codegen.common
             Dictionary<string, List<string>> typeInheritanceChain = new Dictionary<string, List<string>>();
             foreach(var type in types.Values)
             {
-                var inheritanceChain = ResolveFullInhertiance(type.FullyQualifiedName, typeInheritanceChain);
+                var inheritanceChain = ResolveFullInhertiance(type, typeInheritanceChain);
                 type.Inherits = inheritanceChain.ToList();
             }
         }
@@ -60,43 +60,111 @@ namespace onyx_codegen.common
             return types.Values.Where(t => t.Inherits.Any(baseClass => baseClass.StartsWith($"{templateBaseClass}<")));
         }
 
-        private IReadOnlyList<string> ResolveFullInhertiance(string className, Dictionary<string, List<string>> inheritanceCache)
+        private IReadOnlyList<string> ResolveFullInhertiance(Type type, Dictionary<string, List<string>> inheritanceCache)
         {
             List<string>? inheritanceChain;
-            if (inheritanceCache.TryGetValue(className, out inheritanceChain))
+            var fullyQualifiedName = type.FullyQualifiedName;
+            
+            if (inheritanceCache.TryGetValue(fullyQualifiedName, out inheritanceChain))
             {
                 return inheritanceChain;
             }
 
-            Type? type;
             inheritanceChain = new List<string> { };
-            if (types.TryGetValue(className, out type) == false)
-            {
-                return inheritanceChain;
-            }
 
-            int index = type.FullyQualifiedName.LastIndexOf("::");
-            string namespaceContext = type.FullyQualifiedName;
+            int index = fullyQualifiedName.LastIndexOf("::");
+            string namespaceContext = fullyQualifiedName;
             if (index != -1)
             {
                 namespaceContext = namespaceContext.Substring(0, index);
             }
 
-            Type ? baseType;
+            if (type.IsAliased)
+            {
+                var aliasedTypeName = type.AliasedType;
+                var templateIndex = aliasedTypeName.IndexOf('<');
+                if (templateIndex != -1)
+                    aliasedTypeName = aliasedTypeName[0..templateIndex];
+
+                Type? aliasedType = ResolveTypeName(aliasedTypeName, namespaceContext);
+                if (aliasedType == null)
+                {
+                    inheritanceChain.Add(aliasedTypeName);
+                    return inheritanceChain;
+                }
+
+                type = aliasedType;
+            }
+
+            Type? baseType;
             foreach (var baseClass in type.Inherits)
             {
-                baseType = ResolveTypeName(baseClass, namespaceContext);
+                var templateIndex = baseClass.IndexOf('<');
+                var strippedTemplate = baseClass;
+                var templateParameters = "";
+                if (templateIndex != -1)
+                {
+                    strippedTemplate = baseClass[0..templateIndex];
+                    templateParameters = baseClass[(templateIndex + 1)..^1];
+                }
+
+                baseType = ResolveTypeName(strippedTemplate, namespaceContext);
                 if (baseType == null)
                 {
                     inheritanceChain.Add(baseClass);
                     continue;
                 }
 
-                inheritanceChain.Add(baseType.FullyQualifiedName);
-                inheritanceChain.AddRange(ResolveFullInhertiance(baseType.FullyQualifiedName, inheritanceCache));
+                var baseFullyQualifiedName = baseType.FullyQualifiedName;
+                if (templateIndex != -1)
+                {
+                    baseFullyQualifiedName += baseClass[templateIndex..];
+                }
+                inheritanceChain.Add(baseFullyQualifiedName);
+
+                if (baseType is TemplateType templateBaseType)
+                {
+                    // check for if a template argument is used as inhertiance, if it is add that to the chain instead of the template name
+                    bool isDerivedFromTemplateArg = templateBaseType.TemplateParameters.Any(templateBaseType.IsDerivedFrom);
+                    if (isDerivedFromTemplateArg)
+                    {
+                        var templateArguments = templateParameters.Split(',');
+                        for (int i = 0; i < templateBaseType.Inherits.Count; i++)
+                        {
+                            if (templateBaseType.TemplateParameters.Contains(templateBaseType.Inherits[i]))
+                            {
+                                Type? templateBase = ResolveTypeName(templateArguments[i], namespaceContext) ;
+                                if (templateBase == null)
+                                {
+                                    inheritanceChain.Add(templateArguments[i]);
+                                    continue;
+                                }
+
+                                inheritanceChain.Add(templateBase.FullyQualifiedName);
+                                inheritanceChain.AddRange(ResolveFullInhertiance(templateBase, inheritanceCache));
+                            }
+                            else
+                            {
+                                Type? nonTemplateBase = ResolveTypeName(templateBaseType.Inherits[i], namespaceContext);
+                                if (nonTemplateBase == null)
+                                {
+                                    inheritanceChain.Add(templateBaseType.Inherits[i]);
+                                    continue;
+                                }
+
+                                inheritanceChain.Add(nonTemplateBase.FullyQualifiedName);
+                                inheritanceChain.AddRange(ResolveFullInhertiance(nonTemplateBase, inheritanceCache));
+                            }
+                        }
+
+                        continue;
+                    }
+                }
+
+                inheritanceChain.AddRange(ResolveFullInhertiance(baseType, inheritanceCache));
             }
 
-            inheritanceCache[className] = inheritanceChain.ToList();
+            inheritanceCache[type.FullyQualifiedName] = inheritanceChain.ToList();
             return inheritanceChain;
         }
 

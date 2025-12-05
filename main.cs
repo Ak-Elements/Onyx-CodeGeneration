@@ -33,7 +33,7 @@ namespace onyx_codegen
                                 fullyQualifiedName = fullyQualifiedName["Onyx::".Length..];
                             }
 
-                            codeGenerator.Append(fullyQualifiedName);
+                            codeGenerator.Append($"{fullyQualifiedName}();");
                         }
                     }
                 }
@@ -41,8 +41,9 @@ namespace onyx_codegen
             var outPath = args[1].Replace('\\', '/'); // base target output path (binary directory)
             var engineGeneratedCodePath = args[2].Replace('\\', '/'); // base path for generated engine source
             var projectGeneratedCodePath = args[3].Replace('\\', '/'); // base path for generated project source
-            var generatedModuleHeadersFile = args[4].Replace('\\', '/'); // file containing paths to all generated modules
-            var includesPath = args[5].Replace('\\', '/'); // include directories of target
+            var binaryPath = args[4].Replace('\\', '/'); // file containing paths to all generated modules
+            var generatedModuleHeadersFile = Path.Combine(binaryPath, "generatedmoduleheaders");
+            var includesPath = Path.Combine(binaryPath, "includedirectories"); // include directories of target
 
             IReadOnlyList<string> includeDirectories = File.ReadAllLines(includesPath);
             IEnumerable<string> generatedModuleHeaderPaths = File.ReadAllLines(generatedModuleHeadersFile).Distinct();
@@ -103,10 +104,11 @@ namespace onyx_codegen
             var targetName = args[1].Replace('\\', '/'); // target name
             var targetNamespace = args[2]; // target namespace 
             var basePath = args[3].Replace('\\', '/'); // base target path
+            var binaryPath = args[4].Replace("\\", "/");
             var outPublicPath = args[4].Replace('\\', '/'); // base target output path (binary directory)
             var outPrivatePath = args[5].Replace('\\', '/'); // base target output path (binary directory)
-            var sourcesPath = args[6].Replace('\\', '/'); // public sources of target
-            var includesPath = args[7].Replace('\\', '/'); // include directories of target
+            var sourcesPath = Path.Combine(binaryPath, "sourcefiles"); // public sources of target
+            var includesPath = Path.Combine(binaryPath, "includedirectories"); // include directories of target
 
             if (File.Exists(sourcesPath) == false)
             {
@@ -121,7 +123,7 @@ namespace onyx_codegen
             }
 
             IEnumerable<string> sources = File.ReadAllLines(sourcesPath);
-            IReadOnlyList<string> includeDirectories = File.ReadAllLines(includesPath);
+            IEnumerable<string> includeDirectories = File.ReadAllLines(includesPath).Where(path => path.StartsWith(@"D:/private/Irrlicht/code"));
 
             foreach (var includeDirectory in includeDirectories.Distinct())
             {
@@ -133,6 +135,9 @@ namespace onyx_codegen
 
             TypeDatabase typeDatabase = new TypeDatabase();
             typeDatabase.Init(sources, includeDirectories);
+
+            var shaderGraphNodes = typeDatabase.GetDerivedTypes("Onyx::Graphics::ShaderGraphNode");
+            var renderGraphNodes = typeDatabase.GetDerivedTypes("Onyx::Graphics::IRenderGraphNode");
 
             string sourcesBasePath = PathExtension.GetShortestRelativePath(includeDirectories, sources.First());
             ModuleGenerator generator = new ModuleGenerator(targetName, basePath, targetNamespace.Split("::"), typeDatabase);
