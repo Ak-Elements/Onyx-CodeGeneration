@@ -14,7 +14,7 @@ public static class PathExtension
         if (includeDirs.IsNullOrEmpty())
             return target;
 
-        string shortest = "";
+        string? shortest = null;
 
         foreach (var dir in includeDirs)
         {
@@ -40,6 +40,7 @@ public static class PathExtension
                 shortest = relative;
         }
 
-        return shortest ?? target;
+        var result = shortest ?? target;
+        return result.Replace('\\', '/');
     }
 }

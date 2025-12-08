@@ -1,12 +1,4 @@
 ﻿using onyx_codegen.treesitter;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static onyx_codegen.common.Type;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace onyx_codegen.common
 {
@@ -54,32 +46,17 @@ namespace onyx_codegen.common
 
         private string ExtractNamespaceName(TSCursor cursor)
         {
-            // cursor is on "namespace_definition"
-            // move to first child to begin scanning its header
-            //if (!cursor.goto_first_child())
-            //    return "";
-
             List<string> parts = new();
             foreach (var child in cursor.children())
             {
                 string sym = cursor.current_symbol();
-
                 if (sym == "namespace_identifier")
                 {
                     parts.Add(GetNodeContent(cursor.current_node()).ToString());
                 }
                 else if (sym == "nested_namespace_specifier")
                 {
-                    foreach (var nestedChild in cursor.children())
-                    {
-                        if (cursor.current_symbol() == "namespace_identifier")
-                        {
-                            var n = cursor.current_node();
-                            int so = (int)n.start_offset();
-                            int eo = (int)n.end_offset();
-                            parts.Add(GetNodeContent(cursor.current_node()).ToString());
-                        }
-                    }
+                    parts.Add(ExtractNamespaceName(cursor));
                 }
             }
 
@@ -94,6 +71,7 @@ namespace onyx_codegen.common
             switch (sym)
             {
                 case "namespace_definition":
+                    string nodeContent = GetNodeContent(cursor.current_node()).ToString();
                     localNamespaceStack.Add(ExtractNamespaceName(cursor));
                     break;
                 case "class_specifier":
@@ -134,8 +112,8 @@ namespace onyx_codegen.common
                 case "alias_declaration":
                 case "type_definition":
                 {
-                    var newType = new Type();
-                    ExtractAlias(cursor, ref newType, localNamespaceStack);
+                    Type newType;
+                    ExtractAlias(cursor, out newType, localNamespaceStack);
                     outTypes.Add(newType);
                     break;
                 }
@@ -155,10 +133,13 @@ namespace onyx_codegen.common
             }
         }
 
-        private void ExtractAlias(TSCursor cursor, ref Type outType, List<string> namespaceStack)
+        private void ExtractAlias(TSCursor cursor, out Type outType, List<string> namespaceStack)
         {
             ReadOnlySpan<char> aliasName = "";
             ReadOnlySpan<char> alisedType = "";
+            bool isTemplate = false;
+            IEnumerable<string> templateArguments = Enumerable.Empty<string>();
+
             foreach (var child in cursor.children())
             {
                 TSNode node = cursor.current_node();
@@ -172,19 +153,50 @@ namespace onyx_codegen.common
                 if ((sym == "type_descriptor") || (sym == "primitive_type"))
                 {
                     alisedType = GetNodeContent(node);
+                    foreach (var typeChild in cursor.children())
+                    {
+                        var typeSymbol = typeChild.current_symbol();
+                        if ((typeSymbol == "type_identifier") || (typeSymbol == "qualified_identifier"))
+                        {
+                            foreach (var typeIdentifierChild in typeChild.children())
+                            {
+                                if (typeIdentifierChild.current_symbol() == "template_type")
+                                {
+                                    templateArguments = GetTemplateParameters(typeIdentifierChild);
+                                }
+                            }
+                        }
+                        else if (typeSymbol == "template_type")
+                        {
+                            templateArguments = GetTemplateParameters(typeChild);
+                        }
+                    }
+                    
                 }
             }
 
             string name = aliasName.ToString();
-            string fullyQualifiedName = string.Join("::", namespaceStack);
-            fullyQualifiedName = string.IsNullOrEmpty(fullyQualifiedName) ? name : fullyQualifiedName + "::" + name;
+            string namespaceStr = string.Join("::", namespaceStack);
+            var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
+
+            if (isTemplate)
+            {
+                outType = new TemplateType();
+            }
+            else
+            {
+                outType = new Type();
+            }
+
             outType.Name = name;
             outType.FullyQualifiedName = fullyQualifiedName;
+            outType.Namespace = namespaceStr;
             outType.TypeIdentifier = "alias";
             outType.AbsolutePath = filePath;
             outType.IsAliased = true;
             outType.AliasedType = alisedType.ToString();
             outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
+            outType.SpecializedTemplateParameters = templateArguments.ToList();
         }
 
         bool ExtractType(TSCursor cursor, string type, ref Type outType, IReadOnlyList<string> currentNamespace)
@@ -238,11 +250,11 @@ namespace onyx_codegen.common
                 //TODO: not ideal and maybe makes more sense to actually parse the function def, but this seems simpler for now
                 bool hasTypeId = classContent.IndexOf("StringId32 GetTypeId() const".AsSpan()) != -1 && classContent.IndexOf("static constexpr StringId32 TypeId".AsSpan()) != -1;
 
-                string fullyQualifiedName = string.Join("::", currentNamespace);
-                fullyQualifiedName = string.IsNullOrEmpty(fullyQualifiedName) ? name : fullyQualifiedName + "::" + name;
-                //var newType = new Type(name, fullyQualifiedName, type, filePath);
+                string namespaceStr = string.Join("::", currentNamespace);
+                var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
                 outType.Name = name;
                 outType.FullyQualifiedName = fullyQualifiedName;
+                outType.Namespace = namespaceStr;
                 outType.TypeIdentifier = type;
                 outType.AbsolutePath = filePath;
                 outType.Inherits = baseClasses;
@@ -384,21 +396,29 @@ namespace onyx_codegen.common
             var parameters = new List<string>();
             foreach (var child in cursor.children())
             {
-                if (cursor.current_symbol() == "template_parameter_list")
+                if ((cursor.current_symbol() == "template_parameter_list") ||
+                    (cursor.current_symbol() == "template_argument_list"))
                 {
                     foreach (var paramChild in child.children())
                     {
+                        var templateParam = GetNodeContent(paramChild.current_node()).ToString();
                         switch (paramChild.current_symbol())
                         {
                             case "type_parameter_declaration":
                             case "parameter_declaration":
-                                var templateParam = GetNodeContent(paramChild.current_node()).ToString();
                                 if (templateParam.StartsWith("typename"))
                                     templateParam = templateParam.Substring("typename".Count());
                                 parameters.Add(templateParam.Trim());
                                 break;
+                            case "type_descriptor":
+                                parameters.Add(templateParam.Trim());
+                                break;
+                            case "string_literal":
+                            case "primitive_type":
+                                parameters.Add(templateParam.Trim());
+                                break;
+
                             default:
-                                //Console.WriteLine( "other:" + GetNodeContent(paramChild.current_node()).ToString());
                                 break;
                         }
                     }

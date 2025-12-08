@@ -5,8 +5,8 @@ namespace onyx_codegen.common
 {
     internal class TemplateType : Type
     {
-        private IReadOnlyList<string> templateParamters = new List<string>();
+        private IReadOnlyList<string> templateParameters = new List<string>();
         
-        public IReadOnlyList<string> TemplateParameters { get => templateParamters; set => templateParamters = value; }  
+        public IReadOnlyList<string> TemplateParameters { get => templateParameters; set => templateParameters = value; }
     }
 }

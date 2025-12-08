@@ -36,6 +36,62 @@ namespace onyx_codegen.common
 
             globalFunctions = new ConcurrentBag<Function>(globalFunctions.Distinct());
 
+            foreach (var type in types.Values)
+            {
+                if (type.IsAliased == false)
+                    continue;
+
+                var aliasedTypeName = type.AliasedType;
+                var templateIndex = aliasedTypeName.IndexOf('<');
+                if (templateIndex != -1)
+                    aliasedTypeName = aliasedTypeName[0..templateIndex];
+
+                if (string.IsNullOrEmpty(aliasedTypeName))
+                    continue;
+                    
+                Type? aliasedType = ResolveTypeName(aliasedTypeName, type.Namespace);
+                if (aliasedType == null)
+                    continue;
+
+                if (type.Name.Contains("ShaderAddF32"))
+                {
+                    Console.WriteLine();
+                }
+
+                if (aliasedType is TemplateType aliasedTemplateType)
+                {
+                    type.AliasedType = aliasedType.FullyQualifiedName + type.AliasedType[type.AliasedType.IndexOf('<')..];
+                    List<string> inherits = aliasedType.Inherits.ToList();
+
+                    for (int i = 0; i < aliasedType.Inherits.Count; ++i)
+                    {
+                        var baseClass = aliasedType.Inherits[i];
+                        for (int j = 0; j < aliasedTemplateType.TemplateParameters.Count; ++j)
+                        {
+                            if (baseClass.Contains(aliasedTemplateType.TemplateParameters[j]))
+                            {
+                                baseClass = baseClass.Replace(aliasedTemplateType.TemplateParameters[j], type.SpecializedTemplateParameters[j]);
+                            }
+                        }
+
+                        inherits[i] = baseClass;
+                    }
+
+                    type.Inherits = inherits;
+                } 
+                else
+                {
+                    type.AliasedType = aliasedType.FullyQualifiedName;
+                    type.Inherits = aliasedType.Inherits;
+                }
+
+                type.IsAbstract = aliasedType.IsAbstract;
+                type.HasTypeId = aliasedType.HasTypeId;
+               
+
+               
+            }
+
             // sanitize and cleanup inhertied classes
             Dictionary<string, List<string>> typeInheritanceChain = new Dictionary<string, List<string>>();
             foreach(var type in types.Values)
@@ -62,9 +118,53 @@ namespace onyx_codegen.common
 
         private IReadOnlyList<string> ResolveFullInhertiance(Type type, Dictionary<string, List<string>> inheritanceCache)
         {
+            if (type.Name.Contains("ShaderAddF32"))
+            {
+                Console.WriteLine();
+            }
+
+
+            List<string> baseClasses = type.Inherits.ToList();
+           //if (type.IsAliased)
+           //{
+           //    var aliasedTypeName = type.AliasedType;
+           //    var templateIndex = aliasedTypeName.IndexOf('<');
+           //    if (templateIndex != -1)
+           //        aliasedTypeName = aliasedTypeName[0..templateIndex];
+           //
+           //    Type? aliasedType = ResolveTypeName(aliasedTypeName, type.Namespace);
+           //    if (aliasedType == null)
+           //    {
+           //        return type.Inherits.ToList();
+           //    }
+           //
+           //    IReadOnlyList<string>? specializedTemplateArguments = null;
+           //    if (type is TemplateType templatedType)
+           //    {
+           //        specializedTemplateArguments = templatedType.SpecializedTemplateParameters;
+           //    }
+           //
+           //    if (aliasedType is TemplateType aliasedTemplateType)
+           //    {
+           //        if (specializedTemplateArguments == null)
+           //        {
+           //            specializedTemplateArguments = aliasedTemplateType.SpecializedTemplateParameters;
+           //        }
+           //
+           //        for (int i = 0; i < aliasedType.Inherits.Count; ++i)
+           //        {
+           //            if (aliasedTemplateType.TemplateParameters.Contains(aliasedType.Inherits[i]))
+           //            {
+           //                baseClasses.Add(specializedTemplateArguments[i]);
+           //            }
+           //        }
+           //    }
+           //    //return ResolveFullInhertiance(aliasedType, inheritanceCache);
+           //}
+
             List<string>? inheritanceChain;
             var fullyQualifiedName = type.FullyQualifiedName;
-            
+
             if (inheritanceCache.TryGetValue(fullyQualifiedName, out inheritanceChain))
             {
                 return inheritanceChain;
@@ -72,32 +172,8 @@ namespace onyx_codegen.common
 
             inheritanceChain = new List<string> { };
 
-            int index = fullyQualifiedName.LastIndexOf("::");
-            string namespaceContext = fullyQualifiedName;
-            if (index != -1)
-            {
-                namespaceContext = namespaceContext.Substring(0, index);
-            }
-
-            if (type.IsAliased)
-            {
-                var aliasedTypeName = type.AliasedType;
-                var templateIndex = aliasedTypeName.IndexOf('<');
-                if (templateIndex != -1)
-                    aliasedTypeName = aliasedTypeName[0..templateIndex];
-
-                Type? aliasedType = ResolveTypeName(aliasedTypeName, namespaceContext);
-                if (aliasedType == null)
-                {
-                    inheritanceChain.Add(aliasedTypeName);
-                    return inheritanceChain;
-                }
-
-                type = aliasedType;
-            }
-
             Type? baseType;
-            foreach (var baseClass in type.Inherits)
+            foreach (var baseClass in baseClasses)
             {
                 var templateIndex = baseClass.IndexOf('<');
                 var strippedTemplate = baseClass;
@@ -108,7 +184,7 @@ namespace onyx_codegen.common
                     templateParameters = baseClass[(templateIndex + 1)..^1];
                 }
 
-                baseType = ResolveTypeName(strippedTemplate, namespaceContext);
+                baseType = ResolveTypeName(strippedTemplate, type.Namespace);
                 if (baseType == null)
                 {
                     inheritanceChain.Add(baseClass);
@@ -133,7 +209,7 @@ namespace onyx_codegen.common
                         {
                             if (templateBaseType.TemplateParameters.Contains(templateBaseType.Inherits[i]))
                             {
-                                Type? templateBase = ResolveTypeName(templateArguments[i], namespaceContext) ;
+                                Type? templateBase = ResolveTypeName(templateArguments[i], type.Namespace);
                                 if (templateBase == null)
                                 {
                                     inheritanceChain.Add(templateArguments[i]);
@@ -145,7 +221,7 @@ namespace onyx_codegen.common
                             }
                             else
                             {
-                                Type? nonTemplateBase = ResolveTypeName(templateBaseType.Inherits[i], namespaceContext);
+                                Type? nonTemplateBase = ResolveTypeName(templateBaseType.Inherits[i], type.Namespace);
                                 if (nonTemplateBase == null)
                                 {
                                     inheritanceChain.Add(templateBaseType.Inherits[i]);
@@ -189,7 +265,8 @@ namespace onyx_codegen.common
                 currentNamespace = currentNamespace[0..i];
             }
 
-            return null;
+            // try to get closest match to typename even if namespace did not match
+            return types.SingleOrDefault(type => type.Value.Name.Equals(typeName)).Value;
         }
     }
 }

@@ -7,12 +7,14 @@ namespace onyx_codegen.common
     {
         private IReadOnlyList<Function> functions = new List<Function> ();
         private IReadOnlyList<string> inheritanceList = new List<string>();
+        private IReadOnlyList<string> specializedTemplateArguments = new List<string>();
 
         public string Name { get; set; } = "";
         public string FullyQualifiedName { get; set; } = "";
         public string AbsolutePath { get; set; } = "";
         public string IncludePath { get; set; } = "";
         public string TypeIdentifier { get; set; } = ""; // class / struct /enum
+        public string Namespace { get; set; } = "";
 
         public string AliasedType { get; set; } = "";
         public bool IsAliased { get; set; }
@@ -20,6 +22,7 @@ namespace onyx_codegen.common
         public bool HasTypeId { get; set; }
         public IReadOnlyList<string> Inherits { get => inheritanceList; set => inheritanceList = value; }  
         public IReadOnlyList<Function> Functions { get => functions; set => functions = value; }
+        public IReadOnlyList<string> SpecializedTemplateParameters { get => specializedTemplateArguments; set => specializedTemplateArguments = value; }
 
         public IEnumerable<Function> GetConstructors()
         {
