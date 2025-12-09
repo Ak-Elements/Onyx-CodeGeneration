@@ -1,8 +1,8 @@
-﻿namespace onyx_codegen.common
+﻿namespace Onyx.CodeGen.Core
 {
     public static class StringExtensions
     {
-        static internal string TrimFullyQualifiedName(this string typeName, IEnumerable<string> namespaceStack)
+        static public string TrimFullyQualifiedName(this string typeName, IEnumerable<string> namespaceStack)
         {
             foreach (var namespaceIdentifier in namespaceStack)
             {

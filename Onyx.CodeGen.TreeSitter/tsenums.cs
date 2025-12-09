@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace onyx_codegen.treesitter
+namespace Onyx.CodeGen.TreeSitter
 {
     public enum TSInputEncoding
     {

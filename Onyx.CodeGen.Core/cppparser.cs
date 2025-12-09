@@ -1,14 +1,14 @@
-﻿using onyx_codegen.treesitter;
+﻿using Onyx.CodeGen.TreeSitter;
 
-namespace onyx_codegen.common
+namespace Onyx.CodeGen.Core
 {
-    internal class CppParser
+    public class CppParser
     {
         private string source = "";
         private string filePath = "";
         IEnumerable<string> includeDirectories = new List<string>();
 
-        internal CppParser(IEnumerable<string> includeDirectories)
+        public CppParser(IEnumerable<string> includeDirectories)
         {
             this.includeDirectories = includeDirectories;
         }

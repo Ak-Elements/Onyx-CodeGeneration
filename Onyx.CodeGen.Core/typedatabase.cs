@@ -1,15 +1,15 @@
 ﻿using System.Collections.Concurrent;
 
-namespace onyx_codegen.common
+namespace Onyx.CodeGen.Core
 {
-    internal class TypeDatabase
+    public class TypeDatabase
     {
         private ConcurrentDictionary<string, Type> types = new ConcurrentDictionary<string, Type>();
         private ConcurrentBag<Function> globalFunctions = new ConcurrentBag<Function>();
 
         public IReadOnlyDictionary<string, Type> Types { get => types; }
          
-        internal void Init(IEnumerable<string> sources, IEnumerable<string> includeDirectories)
+        public void Init(IEnumerable<string> sources, IEnumerable<string> includeDirectories)
         {
             Parallel.ForEach(sources, source =>
             {
@@ -101,17 +101,17 @@ namespace onyx_codegen.common
             }
         }
 
-        internal IEnumerable<Type> GetTypes()
+        public IEnumerable<Type> GetTypes()
         {
             return types.Values;
         }
 
-        internal IEnumerable<Type> GetDerivedTypes(string baseClass)
+        public IEnumerable<Type> GetDerivedTypes(string baseClass)
         {
             return types.Values.Where(t => t.Inherits.Contains(baseClass));
         }
 
-        internal IEnumerable<Type> GetTypesDerivedFromTemplate(string templateBaseClass)
+        public IEnumerable<Type> GetTypesDerivedFromTemplate(string templateBaseClass)
         {
             return types.Values.Where(t => t.Inherits.Any(baseClass => baseClass.StartsWith($"{templateBaseClass}<")));
         }

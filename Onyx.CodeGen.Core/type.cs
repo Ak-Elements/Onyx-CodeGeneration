@@ -1,9 +1,6 @@
-﻿
-
-
-namespace onyx_codegen.common
+﻿namespace Onyx.CodeGen.Core
 {
-    internal class Type
+    public class Type
     {
         private IReadOnlyList<Function> functions = new List<Function> ();
         private IReadOnlyList<string> inheritanceList = new List<string>();
@@ -54,7 +51,7 @@ namespace onyx_codegen.common
                 $"Functions: {string.Join("\n", functions)}";
         }
 
-        internal bool IsDerivedFrom(string typeName)
+        public bool IsDerivedFrom(string typeName)
         {
             return Inherits.Contains(typeName);
         }

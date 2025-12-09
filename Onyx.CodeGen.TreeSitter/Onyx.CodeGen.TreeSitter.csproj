@@ -1,24 +1,25 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>onyx_codegen</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishTrimmed>True</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="$(ProjectDir)external\bin\tree-sitter-cpp.dll">
+    <None Include="external\bin\tree-sitter.dll" />
+    <Content Include="external\bin\tree-sitter.dll" Visible="false">
+      <Link>tree-sitter.dll</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="external\bin\tree-sitter-cpp.dll" />
+    <Content Include="external\bin\tree-sitter-cpp.dll" Visible="false">
       <Link>tree-sitter-cpp.dll</Link>
-    </None>
-    <None Include="$(ProjectDir)external\bin\tree-sitter.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-        <Link>tree-sitter.dll</Link>
-    </None>
+    </Content>
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">

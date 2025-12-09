@@ -1,9 +1,6 @@
-﻿
-
-
-namespace onyx_codegen.common
+﻿namespace Onyx.CodeGen.Core
 {
-    internal class TemplateType : Type
+    public class TemplateType : Type
     {
         private IReadOnlyList<string> templateParameters = new List<string>();
         

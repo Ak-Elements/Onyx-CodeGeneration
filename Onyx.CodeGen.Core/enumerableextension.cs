@@ -1,4 +1,4 @@
-﻿namespace onyx_codegen.common
+﻿namespace Onyx.CodeGen.Core
 {
     public static class EnumerableExtensions
     {

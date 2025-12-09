@@ -1,7 +1,7 @@
-﻿using onyx_codegen.common;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+﻿using Onyx.CodeGen.Core;
+using Type = Onyx.CodeGen.Core.Type;
 
-namespace onyx_codegen
+namespace Onyx.CodeGen.CLI
 {
     internal class Program
     {
@@ -30,11 +30,10 @@ namespace onyx_codegen
             IEnumerable<string> generatedModuleHeaderPaths = File.ReadAllLines(generatedModuleHeadersFile).Distinct();
             
             CodeGenerator codeGenerator = new CodeGenerator();
-
-            List<common.Type> outTypes;
-            List<common.Function> globalFunctions;
+            List<Type> outTypes;
+            List<Function> globalFunctions;
             List<string> includes = new List<string>();
-            IEnumerable<common.Function> allGlobalFunctions = Enumerable.Empty<common.Function>();
+            IEnumerable<Function> allGlobalFunctions = Enumerable.Empty<Function>();
             foreach (var moduleHeaderPath in generatedModuleHeaderPaths)
             {
                 CppParser parser = new CppParser(includeDirectories);

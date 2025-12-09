@@ -1,4 +1,4 @@
-﻿namespace onyx_codegen.common
+﻿namespace Onyx.CodeGen.Core
 {
     public struct Function
     {
@@ -31,7 +31,7 @@
                    " " + Name;
         }
 
-        internal string? ToStringWithoutName()
+        public string? ToStringWithoutName()
         {
             return (IsConst ? "const " : "") +
                    TypeName +

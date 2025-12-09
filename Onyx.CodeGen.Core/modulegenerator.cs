@@ -1,13 +1,22 @@
-﻿using onyx_codegen.common;
+﻿using System.Linq;
 
-namespace onyx_codegen
+namespace Onyx.CodeGen.Core
 {
-    internal class ModuleGenerator
+    public class ModuleGenerator
     {
+        struct RegisterCreateData
+        {
+            public string FunctionName;
+            public string RegisterFunction;
+            public string AdditionalInclude;
+            public IEnumerable<Type> Types;
+        }
+
         private string moduleName;
         private string moduleSourcePath;
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
+
 
         public ModuleGenerator(string moduleName, string moduleSourcePath, IEnumerable<string> moduleNamespaceStack, TypeDatabase typeDatabase)
         {
@@ -26,8 +35,6 @@ namespace onyx_codegen
 
             var serializers = typeDatabase.GetTypesDerivedFromTemplate("Onyx::Assets::AssetSerializer").Where(type => type.AbsolutePath.StartsWith(moduleSourcePath));
 
-            // TODO: Get general nodegraph nodes
-
             // get shader graph nodes
             var shaderGraphNodes = typeDatabase
                 .GetDerivedTypes("Onyx::Graphics::ShaderGraphNode")
@@ -37,6 +44,18 @@ namespace onyx_codegen
             var renderGraphNodes = typeDatabase
                 .GetDerivedTypes("Onyx::Graphics::IRenderGraphNode")
                 .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
+
+            var inputBindings = typeDatabase
+                .GetDerivedTypes("Onyx::Input::InputBinding")
+                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+
+            var inputTriggers = typeDatabase
+                .GetDerivedTypes("Onyx::Input::InputTrigger")
+                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+
+            var inputModifiers = typeDatabase
+                .GetDerivedTypes("Onyx::Input::InputModifier")
+                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var assetArgs = assets
                 .SelectMany(type => type.GetConstructorsOrStaticCreate() ?? Enumerable.Empty<Function>())
@@ -56,12 +75,20 @@ namespace onyx_codegen
                 .Distinct();
 
             GenerateModuleHeader(outputPublicPath);
-            GenerateModuleCpp(outPrivatePath, allArgumentTypes,
-                engineSystems,
-                assets,
-                serializers,
-                shaderGraphNodes,
-                renderGraphNodes);
+
+            List<RegisterCreateData> register = new List<RegisterCreateData>()
+            {
+                new RegisterCreateData(){FunctionName = "RegisterEngineSystems", RegisterFunction = "Onyx::EngineSystemFactory::Register", Types = engineSystems, AdditionalInclude = "onyx/engine/enginesystemfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterAssets", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = assets, AdditionalInclude = "onyx/assets/assetsystem.h" },
+                new RegisterCreateData(){FunctionName = "RegisterSerializers", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = serializers, AdditionalInclude = "onyx/assets/assetsystem.h" },
+                new RegisterCreateData(){FunctionName = "RegisterShaderGraphNodes", RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", Types = shaderGraphNodes, AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterRenderGraphNodes", RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", Types = renderGraphNodes, AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::Input::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/input/bindings/inputbindingsfactory.h"},
+                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/input/bindings/inputtriggersfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/input/bindings/inputmodifiersfactory.h" },
+            };
+            
+            GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
         }
 
         private void GenerateModuleHeader(string outputPath)
@@ -77,155 +104,105 @@ namespace onyx_codegen
             File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.h"), generator.GetCode());
         }
 
-        private void GenerateModuleCpp(string outputPath, IEnumerable<common.Type> allArguments,
-            IEnumerable<common.Type> engineSystems,
-            IEnumerable<common.Type> assets,
-            IEnumerable<common.Type> serializers,
-            IEnumerable<common.Type> shaderGraphNodes,
-            IEnumerable<common.Type> renderGraphNodes)
+        private void GenerateModuleCpp(string outputPath, IEnumerable<Type> allArguments, IEnumerable<Type> engineSystems, IEnumerable<RegisterCreateData> registerCreateData)
         {
-            IReadOnlyList<common.Type> systemIncludes;
-            //IReadOnlyList<common.Type> assetCreationIncludes;
+            IReadOnlyList<Type> systemIncludes;
+            //IReadOnlyList<Type> assetCreationIncludes;
             CodeGenerator onyxNamespaceCodeGen = new CodeGenerator("");
             using (onyxNamespaceCodeGen.EnterScope("namespace Onyx"))
             {
                 GenerateSystemsCode(onyxNamespaceCodeGen, engineSystems, out systemIncludes);
             }
 
+            List<string> generatedFunctionCalls = new List<string>();
+            List<string> generatedRegisterCodeBlocks = new List<string>();
+            List<string> includes = new List<string>();
+            foreach (var registerData  in registerCreateData)
+            {
+                if (GenerateRegisterFunction(registerData, moduleNamespaceStack, generatedRegisterCodeBlocks, includes))
+                {
+                    generatedFunctionCalls.Add(registerData.FunctionName);
+                }
+            }
+
             CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_HEADER);
-
-            var sortedIncludes = new[] { systemIncludes, assets, serializers, shaderGraphNodes, renderGraphNodes, allArguments }
-                .SelectMany(list => list.Select(item => item.IncludePath));
-
-            bool hasSystems = engineSystems.Any();
-            bool hasAssets = assets.Any();
-            bool hasSerializers = serializers.Any();
-            bool hasShaderGraphNodes = shaderGraphNodes.Any();
-            bool hasRenderGraphNodes = renderGraphNodes.Any();
-            if (hasSystems)
-                sortedIncludes = sortedIncludes.Append("onyx/engine/enginesystemfactory.h");
-
-            if (hasAssets || hasSerializers)
-                sortedIncludes = sortedIncludes.Append("onyx/assets/assetsystem.h");
-
-            if (hasShaderGraphNodes)
-                sortedIncludes = sortedIncludes.Append("onyx/graphics/shadergraph/shadergraphnodefactory.h");
-
-            if (hasRenderGraphNodes)
-                sortedIncludes = sortedIncludes.Append("onyx/graphics/rendergraph/rendergraphnodefactory.h");
-
-            sortedIncludes = sortedIncludes.Distinct()                   // deduplicate
-              .OrderBy(s => s.Count(c => c == '/' || c == '\\'))         // sort by folder depth
-              .ThenBy(s => s)                                            // sort alphabetical
-              .Select(s => $"#include <{s}>");
+            var sortedIncludes = includes
+                .Union(systemIncludes.Select(type => type.IncludePath))
+                .Union(allArguments.Select(type => type.IncludePath))
+                .Distinct()                   // deduplicate
+                .OrderBy(s => s.Count(c => c == '/' || c == '\\'))         // sort by folder depth
+                .ThenBy(s => s)                                            // sort alphabetical
+                .Select(s => $"#include <{s}>");
 
             generator.Append(sortedIncludes);
             generator.AppendLine();
-
+            
             generator.Append(onyxNamespaceCodeGen.GetCode());
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
-                List<string> generatedFunctions = GenerateRegisterFunctions(generator, 
-                    engineSystems,
-                    assets,
-                    serializers,
-                    shaderGraphNodes,
-                    renderGraphNodes
-                );
+                bool appendLine = false;
+                using (generator.EnterScope("namespace"))
+                {
+                    foreach (var codeBlock in generatedRegisterCodeBlocks)
+                    {
+                        if (appendLine)
+                            generator.AppendLine();
+
+                        generator.Append(codeBlock.Split("\r\n", StringSplitOptions.RemoveEmptyEntries));
+
+                        appendLine = true;
+                    }
+                }
+
+                if (appendLine)
+                    generator.AppendLine();
 
                 using (generator.EnterFunction("void Init()"))
                 {
-                    generator.Append(generatedFunctions.Select(functionCall => $"{functionCall}();"));
+                    generator.Append(generatedFunctionCalls.Select(functionCall => $"{functionCall}();"));
                 }
             }
 
             File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.cpp"), generator.GetCode());
         }
 
-        private List<string> GenerateRegisterFunctions(CodeGenerator generator, IEnumerable<common.Type> engineSystems, IEnumerable<common.Type> assets, IEnumerable<common.Type> serializers, IEnumerable<common.Type> shaderGraphNodes, IEnumerable<common.Type> renderGraphNodes)
+        private bool GenerateRegisterFunction(RegisterCreateData registerData, IEnumerable<string> moduleNamespaceStack, List<string> outGeneratedCode, List<string> outIncludes)
         {
-            List<string> generatedFunctionCalls = new List<string>();
-            using (generator.EnterScope("namespace"))
+            if (!registerData.Types.Any())
+                return false;
+
+            CodeGenerator codeGenerator = new CodeGenerator("");
+            var trimmedRegisterFn = registerData.RegisterFunction.TrimFullyQualifiedName(moduleNamespaceStack);
+
+            using (codeGenerator.EnterScope($"void {registerData.FunctionName}()"))
             {
-                if (engineSystems.Any())
+                foreach (var type in registerData.Types.OrderBy(type => type.Name))
                 {
-                    generatedFunctionCalls.Add("RegisterEngineSystems");
+                    outIncludes.Add(type.IncludePath);
 
-                    var trimmedFunctionCall = "Onyx::EngineSystemFactory::Register".TrimFullyQualifiedName(moduleNamespaceStack);
-                    using (generator.EnterScope("void RegisterEngineSystems()"))
-                    {
-                        foreach (var system in engineSystems)
-                        {
-                            generator.Append($"{trimmedFunctionCall}<{system.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack)}>();");
-                        }
-                    }
+                    var trimmedTypeName = type.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack);
 
-                }
-
-                var trimmedAssetRegisterFunctionCall = "Onyx::Assets::AssetSystem::Register".TrimFullyQualifiedName(moduleNamespaceStack);
-                if (assets.Any())
-                {
-                    generatedFunctionCalls.Add("RegisterAssets");
-                    using (generator.EnterScope($"void RegisterAssets()"))
-                    {
-                        
-                        foreach (var asset in assets)
-                        {
-                            generator.Append($"{trimmedAssetRegisterFunctionCall}<{asset.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack)}>();");
-                        }
-                    }
-                }
-
-                if (serializers.Any())
-                {
-                    generatedFunctionCalls.Add("RegisterSerializers");
-                    using (generator.EnterScope($"void RegisterSerializers()"))
-                    {
-                        foreach (var serializer in serializers)
-                        {
-                            generator.Append($"{trimmedAssetRegisterFunctionCall}<{serializer.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack)}>();");
-                        }
-                    }
-                }
-
-                if (shaderGraphNodes.Any())
-                {
-                    generatedFunctionCalls.Add("RegisterShaderGraphNodes");
-                    using (generator.EnterScope($"void RegisterShaderGraphNodes()"))
-                    {
-                        var trimmedFunctionCall = "Onyx::Graphics::ShaderGraphNodeFactory::Register".TrimFullyQualifiedName(moduleNamespaceStack);
-
-                        foreach (var shaderGraphNode in shaderGraphNodes)
-                        {
-                            generator.Append($"{trimmedFunctionCall}<{shaderGraphNode.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack)}>();");
-                        }
-                    }
-                }
-
-                if (renderGraphNodes.Any())
-                {
-                    generatedFunctionCalls.Add("RegisterRenderGraphNodes");
-                    using (generator.EnterScope($"void RegisterRenderGraphNodes()"))
-                    {
-                        string trimmedFunctionCall = "Onyx::Graphics::RenderGraphNodeFactory::Register".TrimFullyQualifiedName(moduleNamespaceStack);
-                        foreach (var renderGraphNode in renderGraphNodes)
-                        {
-                            generator.Append($"{trimmedFunctionCall}<{renderGraphNode.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack)}>();");
-                        }
-                    }
+                    codeGenerator.Append($"{trimmedRegisterFn}<{trimmedTypeName}>();");
                 }
             }
 
-            return generatedFunctionCalls;
+            outGeneratedCode.Add(codeGenerator.GetCode());
+            return true;
         }
 
-        private void GenerateSystemsCode(CodeGenerator codeGenerator, IEnumerable<common.Type> engineSystems, out IReadOnlyList<common.Type> outSystemIncludes)
+        private void GenerateSystemsCode(CodeGenerator codeGenerator, IEnumerable<Type> engineSystems, out IReadOnlyList<Type> outSystemIncludes)
         {
             List<string> namespaceStack = new List<string>() { "Onyx" };
-            List<common.Type> includes = new List<common.Type>();
+            List<Type> includes = new List<Type>();
 
+            bool appendLine = false;
             foreach (var engineSystem in engineSystems)
             {
+                if (appendLine)
+                {
+                    codeGenerator.AppendLine();
+                }
+
                 var engineTypeName = engineSystem.FullyQualifiedName.TrimFullyQualifiedName(namespaceStack);
 
                 codeGenerator.Append("template <>");
@@ -234,17 +211,19 @@ namespace onyx_codegen
                     GenerateSystemCreate(codeGenerator, engineSystem, engineTypeName, includes);
                     GenerateSystemUpdate(codeGenerator, engineSystem, engineTypeName, includes);
                 }
+
+                appendLine = true;
             }
 
             outSystemIncludes = includes.Union(engineSystems).Distinct().ToList();
         }
 
-        private void GenerateSystemCreate(CodeGenerator generator, common.Type engineSystem, string engineTypeName, List<common.Type> outIncludes)
+        private void GenerateSystemCreate(CodeGenerator generator, Type engineSystem, string engineTypeName, List<Type> outIncludes)
         {
             List<string> namespaceStack = new List<string>() { "Onyx" };
             var constructor = engineSystem.GetConstructorsOrStaticCreate().FirstOrDefault();
 
-            IEnumerable<common.Type> constructorParameters = Enumerable.Empty<common.Type>();
+            IEnumerable<Type> constructorParameters = Enumerable.Empty<Type>();
            if (constructor.Parameters.IsNullOrEmpty() == false)
             {
                 constructorParameters = constructor.Parameters
@@ -276,7 +255,7 @@ namespace onyx_codegen
             }
         }
 
-        private void GenerateSystemUpdate(CodeGenerator generator, common.Type engineSystem, string engineTypeName, List<common.Type> outIncludes)
+        private void GenerateSystemUpdate(CodeGenerator generator, Type engineSystem, string engineTypeName, List<Type> outIncludes)
         {
             List<string> namespaceStack = new List<string>() { "Onyx" };
             var updateFunctions = engineSystem.GetFunctions("Update");
