@@ -84,8 +84,8 @@ namespace Onyx.CodeGen.Core
                 new RegisterCreateData(){FunctionName = "RegisterShaderGraphNodes", RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", Types = shaderGraphNodes, AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterRenderGraphNodes", RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", Types = renderGraphNodes, AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::Input::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/input/bindings/inputbindingsfactory.h"},
-                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/input/bindings/inputtriggersfactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/input/bindings/inputmodifiersfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/input/triggers/inputtriggersfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/input/modifiers/inputmodifiersfactory.h>" },
             };
             
             GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
@@ -170,6 +170,8 @@ namespace Onyx.CodeGen.Core
         {
             if (!registerData.Types.Any())
                 return false;
+
+            outIncludes.Add(registerData.AdditionalInclude);
 
             CodeGenerator codeGenerator = new CodeGenerator("");
             var trimmedRegisterFn = registerData.RegisterFunction.TrimFullyQualifiedName(moduleNamespaceStack);
