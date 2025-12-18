@@ -130,6 +130,7 @@ namespace Onyx.CodeGen.TreeSitter
         * if there was no parent node (the cursor was already on the root node).
         */
         [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_parent(ref TSTreeCursor cursor);
 
         /**
@@ -139,6 +140,7 @@ namespace Onyx.CodeGen.TreeSitter
         * if there was no next sibling node.
         */
         [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_next_sibling(ref TSTreeCursor cursor);
 
         /**
@@ -148,6 +150,7 @@ namespace Onyx.CodeGen.TreeSitter
         * if there were no children.
         */
         [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_first_child(ref TSTreeCursor cursor);
 
         /**

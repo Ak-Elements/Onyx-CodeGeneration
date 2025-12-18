@@ -1,4 +1,7 @@
-﻿using Onyx.CodeGen.Core;
+﻿using Onyx.CodeGen.ComponentDSL;
+using Onyx.CodeGen.Core;
+using Onyx.CodeGen.Module;
+using System.CommandLine;
 using Type = Onyx.CodeGen.Core.Type;
 
 namespace Onyx.CodeGen.CLI
@@ -7,24 +10,114 @@ namespace Onyx.CodeGen.CLI
     {
         static void Main(string[] args)
         {
-            var mode = args[0]; // target name
-            if (mode == "--project")
-            {
-                GenerateProjectInit(args);
-            }
-            else if ( mode == "--module")
-            {
-                GenerateModule( args );
-            }
+            RootCommand rootCommand = [CreateProjectCommand(), CreateModuleCommand()];
+            rootCommand.Parse(args).Invoke();
         }
 
-        static void GenerateProjectInit(string[] args)
+        static Command CreateProjectCommand()
         {
-            var outPath = args[1].Replace('\\', '/'); // base target output path (binary directory)
-            var engineGeneratedCodePath = args[2].Replace('\\', '/'); // base path for generated engine source
-            var projectGeneratedCodePath = args[3].Replace('\\', '/'); // base path for generated project source
+            var cmd = new Command("project", "Generate init code for a project.");
+
+            var binaryDirOpt = new Option<string>("--binary-dir")
+            {
+                Description = "Module binary directory",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+                Required = true
+            };
+
+            var outDirOpt = new Option<string>("--out-dir")
+            {
+                Description = "Output directory",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+                Required = true
+            };
+           
+            cmd.Add(binaryDirOpt);
+            cmd.Add(outDirOpt);
+            cmd.SetAction(RunProjectBootstrapGeneration);
+
+            return cmd;
+        }
+
+
+        static Command CreateModuleCommand()
+        {
+            var cmd = new Command("module", "Generate code for an engine/project module.");
+
+            var targetOpt = new Option<string>("--target")
+            {
+                Description = "CMake target name",
+                Required = true
+            };
+
+            var namespaceOpt = new Option<string>("--namespace")
+            {
+                Description = "C++ namespace",
+                Required = true
+            };
+
+            var sourceDirOpt = new Option<string>("--source-dir")
+            {
+                Description = "Module source directory",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+                Required = true
+            };
+
+            var binaryDirOpt = new Option<string>("--binary-dir")
+            {
+                Description = "Module binary directory",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+                Required = true
+            };
+
+            var generatedDirOpt = new Option<string>(
+                "--generated-dir")
+            {
+                Description = "Generated output directory",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+                DefaultValueFactory = (_) => "generated",
+                
+            };
+            
+            var publicDirOpt = new Option<string>("--public-dir")
+            {
+                Description = "Public include directory (relative)",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+            };
+
+            var privateDirOpt = new Option<string>("--private-dir")
+            {
+                Description = "Private include directory (relative)",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+            };
+
+            var privateEditorBinaryDirOpt = new Option<string>("--editor-dir")
+            {
+                Description = "Private binary directory for the editor module",
+                DefaultValueFactory = (_) => "",
+                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
+            };
+
+            cmd.Add(targetOpt);
+            cmd.Add(namespaceOpt);
+            cmd.Add(sourceDirOpt);
+            cmd.Add(binaryDirOpt);
+            cmd.Add(generatedDirOpt);
+            cmd.Add(publicDirOpt);
+            cmd.Add(privateDirOpt);
+            cmd.Add(privateEditorBinaryDirOpt);
+
+            cmd.SetAction(RunModuleCodeGeneration);
+
+            return cmd;
+        }
+
+        static void RunProjectBootstrapGeneration(ParseResult result)
+        {
+            var outPath = result.GetRequiredValue<string>("--out-dir");
+            var projectGeneratedCodePath = result.GetRequiredValue<string>("--binary-dir"); 
             var generatedModuleHeadersFile = Path.Combine(projectGeneratedCodePath, "generatedmoduleheaders");
-            var includesPath = Path.Combine(projectGeneratedCodePath, "includedirectories"); // include directories of target
+            var includesPath = Path.Combine(projectGeneratedCodePath, "includedirectories");
 
             IReadOnlyList<string> includeDirectories = File.ReadAllLines(includesPath);
             IEnumerable<string> generatedModuleHeaderPaths = File.ReadAllLines(generatedModuleHeadersFile).Distinct();
@@ -73,16 +166,28 @@ namespace Onyx.CodeGen.CLI
             File.WriteAllText(outPath, codeGenerator.GetCode());
         }
 
-        static void GenerateModule(string[] args)
+        static void RunModuleCodeGeneration(ParseResult result)
         {
-            var targetName = args[1].Replace('\\', '/'); // target name
-            var targetNamespace = args[2]; // target namespace 
-            var basePath = args[3].Replace('\\', '/'); // base target path
-            var binaryPath = args[4].Replace("\\", "/");
-            var outPublicPath = args[5].Replace('\\', '/'); // base target output path (binary directory)
-            var outPrivatePath = args[6].Replace('\\', '/'); // base target output path (binary directory)
-            var sourcesPath = Path.Combine(binaryPath, "sourcefiles"); // public sources of target
-            var includesPath = Path.Combine(binaryPath, "includedirectories"); // include directories of target
+            string targetName = result.GetRequiredValue<string>("--target")!;
+            string targetNamespace = result.GetRequiredValue<string>("--namespace")!;
+            string sourceDir = result.GetRequiredValue<string>("--source-dir")!;
+            string binaryDir = result.GetRequiredValue<string>("--binary-dir")!;
+            string generatedPathSuffix = result.GetValue<string>("--generated-dir") ?? "generated";
+            string publicPathSuffix = result.GetRequiredValue<string>("--public-dir");
+            string privatePathSuffix = result.GetRequiredValue<string>("--private-dir");
+            string editorDir = result.GetValue<string>("--editor-dir") ?? "";
+
+            var outPublicPath = binaryDir + "/" + generatedPathSuffix + "/" + publicPathSuffix;
+            var outPrivatePath = binaryDir + "/" + generatedPathSuffix + "/" + privatePathSuffix;
+
+            // only used for engine modules
+            var outEditorPrivatePath = editorDir.Replace('\\', '/'); // base target output path for editor files (binary directory)
+
+            var sourcesPath = Path.Combine(binaryDir, "sourcefiles"); // public sources of target
+            var includesPath = Path.Combine(binaryDir, "includedirectories"); // include directories of target
+
+            // output containing all files generated so consecutive runs can delete files that are no longer valid
+            var generatedFilesPath = Path.Combine(binaryDir, "generatedfiles");
 
             if (File.Exists(sourcesPath) == false)
             {
@@ -98,6 +203,7 @@ namespace Onyx.CodeGen.CLI
 
             IEnumerable<string> sources = File.ReadAllLines(sourcesPath);
             IEnumerable<string> includeDirectories = File.ReadAllLines(includesPath);
+            IEnumerable<string> oldGeneratedFiles = File.Exists(generatedFilesPath) ? File.ReadAllLines(generatedFilesPath) : Enumerable.Empty<string>();
 
             foreach (var includeDirectory in includeDirectories.Distinct())
             {
@@ -107,12 +213,41 @@ namespace Onyx.CodeGen.CLI
                 sources = sources.Union(Directory.EnumerateFiles(includeDirectory, "*.h", SearchOption.AllDirectories).Select(s => s.Replace('\\', '/')));
             }
 
+            IEnumerable<string> componentDefinitions = sources.Where(sourcePath => sourcePath.EndsWith(".ocd"));
+            IEnumerable<string> cppSources = sources.Except(componentDefinitions);
+
             TypeDatabase typeDatabase = new TypeDatabase();
-            typeDatabase.Init(sources, includeDirectories);
+            typeDatabase.Init(cppSources, includeDirectories);
+
+            IEnumerable<string> moduleNamespaceStack = targetNamespace.Split("::");
+            
+            ComponentGenerator componentGenerator = new ComponentGenerator(typeDatabase,
+                sourceDir,
+                publicPathSuffix,
+                privatePathSuffix,
+                generatedPathSuffix,
+                outPublicPath,
+                outPrivatePath,
+                outEditorPrivatePath,
+                includeDirectories,
+                moduleNamespaceStack);
+            
+            foreach (var componentDefinition in componentDefinitions)
+            {
+                componentGenerator.Generate(componentDefinition);
+            }
             
             string sourcesBasePath = PathExtension.GetShortestRelativePath(includeDirectories, sources.First());
-            ModuleGenerator generator = new ModuleGenerator(targetName, basePath, targetNamespace.Split("::"), typeDatabase);
-            generator.GenerateModule(outPublicPath, outPrivatePath);
+            ModuleGenerator generator = new ModuleGenerator(targetName, sourceDir, moduleNamespaceStack, typeDatabase);
+            IEnumerable<string> generatedFiles = generator.GenerateModule(outPublicPath, outPrivatePath);
+            
+            IEnumerable<string> filesToDelete = oldGeneratedFiles.Except(generatedFiles);
+            foreach (var file in filesToDelete)
+            {
+                File.Delete(file);
+            }
+            
+            File.WriteAllLines(generatedFilesPath, generatedFiles);
         }
     }
 }

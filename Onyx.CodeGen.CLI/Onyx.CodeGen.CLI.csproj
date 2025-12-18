@@ -12,7 +12,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Onyx.CodeGen.Core\Onyx.CodeGen.Core.csproj" />
+    <ProjectReference Include="..\Onyx.CodeGen.Module\Onyx.CodeGen.Module.csproj" />
+    <ProjectReference Include="..\Onyx.GodeGen.ComponentDSL\Onyx.CodeGen.ComponentDSL.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
-﻿using System.Linq;
+﻿using Onyx.CodeGen.Core;
+using Type = Onyx.CodeGen.Core.Type;
 
-namespace Onyx.CodeGen.Core
+namespace Onyx.CodeGen.Module
 {
     public class ModuleGenerator
     {
@@ -26,8 +27,10 @@ namespace Onyx.CodeGen.Core
             this.typeDatabase = typeDatabase;
         }
 
-        public void GenerateModule(string outputPublicPath, string outPrivatePath)
+        public IEnumerable<string> GenerateModule(string outputPublicPath, string outPrivatePath)
         {
+            List<string> generatedFiles = new List<string>();
+
             var engineSystems = typeDatabase.GetDerivedTypes("Onyx::IEngineSystem").Where(type => type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var assets = typeDatabase.GetTypesDerivedFromTemplate("Onyx::Assets::Asset");
@@ -74,7 +77,7 @@ namespace Onyx.CodeGen.Core
                 .SelectMany(argument => typeDatabase.GetTypes().Where(s => s.FullyQualifiedName.EndsWith(argument.TypeName)))
                 .Distinct();
 
-            GenerateModuleHeader(outputPublicPath);
+            var headerFile = GenerateModuleHeader(outputPublicPath);
 
             List<RegisterCreateData> register = new List<RegisterCreateData>()
             {
@@ -88,10 +91,14 @@ namespace Onyx.CodeGen.Core
                 new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/input/modifiers/inputmodifiersfactory.h>" },
             };
             
-            GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
+            var cppFile = GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
+
+            generatedFiles.Add(headerFile);
+            generatedFiles.Add(cppFile);
+            return generatedFiles;
         }
 
-        private void GenerateModuleHeader(string outputPath)
+        private string GenerateModuleHeader(string outputPath)
         {
             CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_HEADER);
             generator.Append("#pragma once");
@@ -100,11 +107,13 @@ namespace Onyx.CodeGen.Core
             {
                 generator.Append("void Init();");
             }
-        
-            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.h"), generator.GetCode());
+
+            var headerFile = Path.Join(outputPath, $"{moduleName}.gen.h");
+            File.WriteAllText(headerFile, generator.GetCode());
+            return headerFile;
         }
 
-        private void GenerateModuleCpp(string outputPath, IEnumerable<Type> allArguments, IEnumerable<Type> engineSystems, IEnumerable<RegisterCreateData> registerCreateData)
+        private string GenerateModuleCpp(string outputPath, IEnumerable<Type> allArguments, IEnumerable<Type> engineSystems, IEnumerable<RegisterCreateData> registerCreateData)
         {
             IReadOnlyList<Type> systemIncludes;
             //IReadOnlyList<Type> assetCreationIncludes;
@@ -148,7 +157,7 @@ namespace Onyx.CodeGen.Core
                         if (appendLine)
                             generator.AppendLine();
 
-                        generator.Append(codeBlock.Split("\r\n", StringSplitOptions.RemoveEmptyEntries));
+                        generator.Append(codeBlock.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
 
                         appendLine = true;
                     }
@@ -163,7 +172,9 @@ namespace Onyx.CodeGen.Core
                 }
             }
 
-            File.WriteAllText(Path.Join(outputPath, $"{moduleName}.gen.cpp"), generator.GetCode());
+            var cppFile = Path.Join(outputPath, $"{moduleName}.gen.cpp");
+            File.WriteAllText(cppFile, generator.GetCode());
+            return cppFile;
         }
 
         private bool GenerateRegisterFunction(RegisterCreateData registerData, IEnumerable<string> moduleNamespaceStack, List<string> outGeneratedCode, List<string> outIncludes)

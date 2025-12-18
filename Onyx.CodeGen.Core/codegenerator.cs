@@ -15,7 +15,7 @@ namespace Onyx.CodeGen.Core
 
            """;
 
-        public struct CodeScope : IDisposable
+        public class CodeScope : IDisposable
         {
             private CodeGenerator generator;
             private string scopeExitString = "}";
@@ -106,10 +106,19 @@ namespace Onyx.CodeGen.Core
             stringBuilder.AppendLine($"{new string(' ', 4 * scope)}{character}");
         }
 
-        public void Append(string str)
+        public void Append(string str, bool skipIndent = false)
         {
-            stringBuilder.AppendLine($"{new string(' ', 4 * scope)}{str}");
+            if (skipIndent)
+            {
+                stringBuilder.AppendLine(str);
+            }
+            else
+            {
+                stringBuilder.AppendLine($"{new string(' ', 4 * scope)}{str}");
+            }
+            
         }
+
 
         public void Append(IEnumerable<string> lines)
         {
@@ -122,6 +131,11 @@ namespace Onyx.CodeGen.Core
         public string GetCode()
         {
             return stringBuilder.ToString();
+        }
+
+        public IEnumerable<string> GetCodeLines()
+        {
+            return stringBuilder.ToString().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         }
     }
 }

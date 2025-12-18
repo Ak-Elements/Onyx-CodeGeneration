@@ -53,11 +53,6 @@ namespace Onyx.CodeGen.Core
                 if (aliasedType == null)
                     continue;
 
-                if (type.Name.Contains("ShaderAddF32"))
-                {
-                    Console.WriteLine();
-                }
-
                 if (aliasedType is TemplateType aliasedTemplateType)
                 {
                     type.AliasedType = aliasedType.FullyQualifiedName + type.AliasedType[type.AliasedType.IndexOf('<')..];
@@ -87,9 +82,6 @@ namespace Onyx.CodeGen.Core
 
                 type.IsAbstract = aliasedType.IsAbstract;
                 type.HasTypeId = aliasedType.HasTypeId;
-               
-
-               
             }
 
             // sanitize and cleanup inhertied classes
@@ -118,50 +110,7 @@ namespace Onyx.CodeGen.Core
 
         private IReadOnlyList<string> ResolveFullInhertiance(Type type, Dictionary<string, List<string>> inheritanceCache)
         {
-            if (type.Name.Contains("ShaderAddF32"))
-            {
-                Console.WriteLine();
-            }
-
-
             List<string> baseClasses = type.Inherits.ToList();
-           //if (type.IsAliased)
-           //{
-           //    var aliasedTypeName = type.AliasedType;
-           //    var templateIndex = aliasedTypeName.IndexOf('<');
-           //    if (templateIndex != -1)
-           //        aliasedTypeName = aliasedTypeName[0..templateIndex];
-           //
-           //    Type? aliasedType = ResolveTypeName(aliasedTypeName, type.Namespace);
-           //    if (aliasedType == null)
-           //    {
-           //        return type.Inherits.ToList();
-           //    }
-           //
-           //    IReadOnlyList<string>? specializedTemplateArguments = null;
-           //    if (type is TemplateType templatedType)
-           //    {
-           //        specializedTemplateArguments = templatedType.SpecializedTemplateParameters;
-           //    }
-           //
-           //    if (aliasedType is TemplateType aliasedTemplateType)
-           //    {
-           //        if (specializedTemplateArguments == null)
-           //        {
-           //            specializedTemplateArguments = aliasedTemplateType.SpecializedTemplateParameters;
-           //        }
-           //
-           //        for (int i = 0; i < aliasedType.Inherits.Count; ++i)
-           //        {
-           //            if (aliasedTemplateType.TemplateParameters.Contains(aliasedType.Inherits[i]))
-           //            {
-           //                baseClasses.Add(specializedTemplateArguments[i]);
-           //            }
-           //        }
-           //    }
-           //    //return ResolveFullInhertiance(aliasedType, inheritanceCache);
-           //}
-
             List<string>? inheritanceChain;
             var fullyQualifiedName = type.FullyQualifiedName;
 
@@ -244,7 +193,7 @@ namespace Onyx.CodeGen.Core
             return inheritanceChain;
         }
 
-        private Type? ResolveTypeName(string typeName, string namespaceContext)
+        public Type? ResolveTypeName(string typeName, string namespaceContext)
         {
             Type? type;
             if (types.TryGetValue(typeName, out type))
