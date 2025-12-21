@@ -140,11 +140,7 @@ namespace Onyx.CodeGen.CLI
                 }
             }
 
-            var sortedIncludes = includes.OrderBy(s => s.Count(c => c == '/'))  // sort by folder depth
-              .ThenBy(s => s)                                                   // sort alphabetical
-              .Select(s => $"#include <{s}>");
-
-            codeGenerator.Append(sortedIncludes);
+            codeGenerator.AddIncludes(includes);
             codeGenerator.AppendLine();
             
             using (codeGenerator.EnterScope("namespace Onyx"))

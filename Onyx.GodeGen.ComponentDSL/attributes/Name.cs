@@ -1,10 +1,10 @@
 ﻿namespace Onyx.CodeGen.ComponentDSL
 {
     [AttributeUsage(AttributeTargets.Class, Inherited = true)]
-    public class Name : Attribute
+    public class NameAttribute : Attribute
     {
         internal string Value { get; set; } = "";
-        public Name(string name)
+        public NameAttribute(string name)
         {
             Value = name;
         }

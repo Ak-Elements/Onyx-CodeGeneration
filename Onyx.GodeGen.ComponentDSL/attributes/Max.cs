@@ -1,9 +1,9 @@
 ﻿namespace Onyx.CodeGen.ComponentDSL
 {
-    internal class Max : Attribute
+    internal class MaxAttribute : Attribute
     {
         internal object Value { get; private set; }
-        public Max(object value) { Value = value; }
+        public MaxAttribute(object value) { Value = value; }
 
         public override string ToString() => $"Max({Value.ToString()})";
     }

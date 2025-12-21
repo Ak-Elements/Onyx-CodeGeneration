@@ -30,14 +30,14 @@ namespace Onyx.CodeGen.ComponentDSL
                 return null;
             }
 
-            return Activator.CreateInstance(editorType) as IFieldEditor ?? null; ;
+            return Activator.CreateInstance(editorType, nonPublic: true) as IFieldEditor ?? null;
         }
 
         internal static IFieldEditor? GetEditor(Field field)
         {
             var editorType = FIELD_EDITORS.Where(editorType =>
             {
-                if (editorType.GetCustomAttribute<AllowedTypes>(inherit: true) is AllowedTypes allowedTypes)
+                if (editorType.GetCustomAttribute<AllowedTypesAttribute>(inherit: true) is AllowedTypesAttribute allowedTypes)
                 {
                     return allowedTypes.Types.Any(type => 
                     {
@@ -63,7 +63,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 return null;
             }
 
-            return Activator.CreateInstance(editorType) as IFieldEditor ?? null;
+            return Activator.CreateInstance(editorType, nonPublic: true) as IFieldEditor ?? null;
         }
     }
 }

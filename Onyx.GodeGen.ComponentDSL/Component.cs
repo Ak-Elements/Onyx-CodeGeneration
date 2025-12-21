@@ -2,14 +2,21 @@
 {
     internal struct Component
     {
-        internal string Name { get; set; }
-        internal string FullyQualifiedName { get; set; }
-        internal List<Attribute> Attributes { get; set; }
-        internal List<Field> Fields;
+        public Component()
+        {
+        }
 
-        internal bool IsTransient => HasAttribute<Transient>();
-        internal bool IsReadOnly => HasAttribute<ReadOnly>();
-        internal bool IsHidden => HasAttribute<Hidden>();
+        internal string Name { get; set; } = string.Empty;
+        internal string FullyQualifiedName { get; set; } = string.Empty;
+        internal List<Attribute> Attributes { get; set; } = [];
+        internal List<Field> Fields { get; set; } = [];
+
+        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
+        //internal bool IsTransient => HasAttribute<TransientAttribute>();
+        internal bool IsReadOnly => HasAttribute<ReadOnlyAttribute>();
+        internal bool IsHidden => HasAttribute<HiddenAttribute>();
+
+        //internal bool IsSerializable => (IsRuntimeOnly == false) && (IsTransient == false);
 
         internal bool HasAttribute<T>() where T : Attribute
         {

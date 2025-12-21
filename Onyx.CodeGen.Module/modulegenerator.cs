@@ -135,15 +135,10 @@ namespace Onyx.CodeGen.Module
             }
 
             CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_HEADER);
-            var sortedIncludes = includes
-                .Union(systemIncludes.Select(type => type.IncludePath))
-                .Union(allArguments.Select(type => type.IncludePath))
-                .Distinct()                   // deduplicate
-                .OrderBy(s => s.Count(c => c == '/' || c == '\\'))         // sort by folder depth
-                .ThenBy(s => s)                                            // sort alphabetical
-                .Select(s => $"#include <{s}>");
+            generator.AddIncludes(includes);
+            generator.AddIncludes( systemIncludes.Select(type => type.IncludePath) );
+            generator.AddIncludes( allArguments.Select(type => type.IncludePath) );
 
-            generator.Append(sortedIncludes);
             generator.AppendLine();
             
             generator.Append(onyxNamespaceCodeGen.GetCode());

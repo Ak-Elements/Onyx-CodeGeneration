@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Onyx.CodeGen.CLI": {
+      "commandName": "Project",
+      "commandLineArgs": "module\r\n--target onyx-gamecore\r\n--namespace Onyx::GameCore\r\n--source-dir \"C:\\Projects\\Irrlicht\\onyx\\onyx\\modules\\gamecore\"\r\n--binary-dir \"C:\\Projects\\Irrlicht\\build\\onyx\\onyx\\modules\\gamecore\"\r\n--public-dir \"public\\onyx\\gamecore\"\r\n--private-dir \"private\\onyx\\gamecore\"\r\n--editor-dir \"C:\\Projects\\Irrlicht\\build\\onyx\\onyx\\modules\\editor\\generated\\private\\onyx\\editor\""
+    }
+  }
+}

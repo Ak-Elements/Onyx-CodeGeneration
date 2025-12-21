@@ -12,11 +12,11 @@
 
         internal string FallbackTypeName { get; set; }
 
-        internal bool IsTransient => HasAttribute<Transient>();
-        internal bool IsReadOnly => HasAttribute<ReadOnly>();
-        internal bool IsHidden => HasAttribute<Hidden>();
+        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
+        internal bool IsReadOnly => HasAttribute<ReadOnlyAttribute>();
+        internal bool IsHidden => HasAttribute<HiddenAttribute>();
 
-        internal string DisplayName => GetAttribute<Name>()?.Value ?? Name;
+        internal string DisplayName => GetAttribute<NameAttribute>()?.Value ?? Name;
 
         internal bool HasAttribute<T>() where T : Attribute
         {

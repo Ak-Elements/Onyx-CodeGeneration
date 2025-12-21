@@ -20,11 +20,6 @@ namespace Onyx.CodeGen.ComponentDSL
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
 
-        private static readonly IEnumerable<System.Type> ANNOTATION_ATTRIBUTES = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(s => s.GetTypes())
-            .Where(p => !p.IsGenericType)
-            .Where(p => typeof(Attribute).IsAssignableFrom(p));
-
 
 
         public ComponentGenerator(TypeDatabase typeDatabase,
@@ -73,13 +68,8 @@ namespace Onyx.CodeGen.ComponentDSL
             {
                 CodeGenerator codeGenerator = new CodeGenerator();
 
-                var sortedIncludes = componentIncludes.Union(editorIncludes)
-                    .Distinct()                                                 // deduplicate
-                    .OrderBy(s => s.Count(c => c == '/' || c == '\\'))          // sort by folder depth
-                    .ThenBy(s => s)                                             // sort alphabetical
-                    .Select(s => $"#include <{s}>");
-
-                codeGenerator.Append(sortedIncludes);
+                codeGenerator.AddIncludes(componentIncludes);
+                codeGenerator.AddIncludes(editorIncludes);
                 codeGenerator.AppendLine();
 
                 codeGenerator.Append(editorCppCodeLines);
@@ -94,8 +84,8 @@ namespace Onyx.CodeGen.ComponentDSL
             {
                 {
                     CodeGenerator codeGenerator = new CodeGenerator();
-                    codeGenerator.Append($"#include <{headerIncludePath}>");
-                    codeGenerator.Append(componentIncludes.Select(include => $"#include <{include}>"));
+                    codeGenerator.AddInclude(headerIncludePath);
+                    codeGenerator.AddIncludes(componentIncludes);
                     codeGenerator.AppendLine();
                     codeGenerator.Append(componentCppCodeLines);
                     File.WriteAllText(cppPath, codeGenerator.GetCode());
@@ -104,7 +94,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 {
                     var editorCppPath = Path.Join(outEditorPath, relativePath, $"{outFileName}_editor.gen.cpp");
                     CodeGenerator codeGenerator = new CodeGenerator();
-                    codeGenerator.Append(editorIncludes.Select(include => $"#include <{include}>"));
+                    codeGenerator.AddIncludes(editorIncludes);
                     codeGenerator.AppendLine();
                     codeGenerator.Append(editorCppCodeLines);
                     File.WriteAllText(editorCppPath, codeGenerator.GetCode());
@@ -123,7 +113,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 GenerateComponentDeclaration(codeGenerator, currentNamespace, component);
             }
 
-            var nonTransientComponents = components.Where(component => component.IsTransient == false);
+            var nonTransientComponents = components.Where(component => component.IsRuntimeOnly == false);
             if (nonTransientComponents.Any())
             {
                 codeGenerator.AppendLine();
@@ -142,14 +132,11 @@ namespace Onyx.CodeGen.ComponentDSL
         private static void GenerateComponentDeclaration(CodeGenerator codeGenerator, string currentNamespace, Component component)
         {
             var includes = component.Fields
-                .Where(field => field.Type?.AbsolutePath.Contains("onyx/modules/core") == false)
-                .Select(field => field.Type?.IncludePath)
-                .Distinct()                                                 // deduplicate
-                .OrderBy(s => s.Count(c => c == '/' || c == '\\'))          // sort by folder depth
-                .ThenBy(s => s)                                             // sort alphabetical
-                .Select(s => $"#include <{s}>"); ;
+              .Where(field => field.Type != null && field.Type.AbsolutePath.Contains("onyx/modules/core") == false)
+              .Select(field => field.Type?.IncludePath ?? "");
 
-            codeGenerator.Append(includes);
+            codeGenerator.AddIncludes(includes);
+
             if (includes.Any())
             {
                 codeGenerator.AppendLine();
@@ -158,7 +145,7 @@ namespace Onyx.CodeGen.ComponentDSL
             using (codeGenerator.EnterScope($"namespace {currentNamespace}"))
             using (codeGenerator.EnterClass($"struct {component.Name}"))
             {
-                bool isTransient = component.IsTransient;
+                bool isRuntimeOnly = component.IsRuntimeOnly;
                 bool isHidden = component.IsHidden;
 
                 if (isHidden)
@@ -166,12 +153,12 @@ namespace Onyx.CodeGen.ComponentDSL
                     codeGenerator.Append("static constexpr bool HideInEditor = true;");
                 }
 
-                if (isTransient)
+                if (isRuntimeOnly)
                 {
                     codeGenerator.Append("static constexpr bool IsTransient = true;");
                 }
 
-                if (isTransient || isHidden)
+                if (isRuntimeOnly || isHidden)
                 {
                     codeGenerator.AppendLine();
                 }
@@ -195,19 +182,23 @@ namespace Onyx.CodeGen.ComponentDSL
                     {
                         if (field.TypeName.Equals("string", StringComparison.OrdinalIgnoreCase))
                         {
-                            codeGenerator.Append($"{field.TypeName} {field.Name} {{\"{field.DefaultValue}\"}};");
+                            codeGenerator.Append($"{field.TypeName} {field.Name} {{ \"{field.DefaultValue}\" }};");
                         }
                         else
                         {
-                            codeGenerator.Append($"{field.TypeName} {field.Name} {{{field.DefaultValue}}};");
+                            codeGenerator.Append($"{field.TypeName} {field.Name} {{ {field.DefaultValue} }};");
                         }
                     }
                 }
 
-                codeGenerator.AppendLine();
-                codeGenerator.Append("#if ONYX_IS_DEBUG || ONYX_IS_EDITOR", true);
-                codeGenerator.Append("bool DrawProperties(bool showHidden);");
-                codeGenerator.Append("#endif", true);
+                bool hasEditorFields = component.Fields.Any(component => component.IsHidden == false);
+                if( hasEditorFields )
+                {
+                    codeGenerator.AppendLine();
+                    codeGenerator.Append("#if ONYX_IS_DEBUG || ONYX_IS_EDITOR", true);
+                    codeGenerator.Append("bool DrawProperties(bool forceShow);");
+                    codeGenerator.Append("#endif", true);
+                }
             }
         }
 
@@ -228,22 +219,22 @@ namespace Onyx.CodeGen.ComponentDSL
 
             CodeGenerator codeGenerator = new CodeGenerator("");
 
-            var nonTransientComponents = components.Where(component => component.IsTransient == false);
-            if (nonTransientComponents.Any())
+            var serializableComponents = components.Where(component => component.IsRuntimeOnly == false);
+            if (serializableComponents.Any())
             {
                 includePaths.Add("onyx/serialize/serializer.h");
                 includePaths.Add("onyx/serialize/deserializer.h");
 
                 using (codeGenerator.EnterScope($"namespace Onyx"))
                 {
-                    foreach (var component in nonTransientComponents)
+                    foreach (var component in serializableComponents)
                     {
                         var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("Onyx");
                         var serializerComponentParameterName = char.ToLower(component.Name[0]) + component.Name[1..];
                         using (codeGenerator.EnterFunction($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
                         {
                             var serializerCalls = component.Fields
-                                .Where(field => field.IsTransient == false)
+                                .Where(field => field.IsRuntimeOnly == false)
                                 .Select(field => $"serializer.Write<\"{field.Name}\">({serializerComponentParameterName}.{field.Name})");
 
                             var serializerWritesCount = serializerCalls.Count();
@@ -273,7 +264,7 @@ namespace Onyx.CodeGen.ComponentDSL
                         using (codeGenerator.EnterFunction($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
                         {
                             var deserializerCalls = component.Fields
-                                .Where(field => field.IsTransient == false)
+                                .Where(field => field.IsRuntimeOnly == false)
                                 .Select(field => $"deserializer.Read<\"{field.Name}\">(out{component.Name}.{field.Name})");
 
                             var serializerReadsCount = deserializerCalls.Count();
@@ -314,62 +305,68 @@ namespace Onyx.CodeGen.ComponentDSL
 
             CodeGenerator codeGenerator = new CodeGenerator("");
             var currentNamespace = string.Join("::", moduleNamespaceStack);
-            using (codeGenerator.EnterScope($"namespace {currentNamespace}"))
+            using( codeGenerator.EnterScope( $"namespace {currentNamespace}" ) )
             {
-                foreach (var component in components)
+                foreach( var component in components )
                 {
-                    bool hasFields = component.Fields.Any();
-                    bool hasHiddenFields = component.Fields.Any(component => component.IsHidden);
+                    bool hasEditorFields = component.Fields.Any( component => component.IsHidden == false );
+                    if( hasEditorFields == false )
+                    {
+                        continue;
+                    }
+
+                    //bool hasFields = component.Fields.Any(component => component.IsHidden);
+                    bool hasRuntimeOnlyFields = component.Fields.Any( component => component.IsRuntimeOnly && ( component.IsHidden == false ) );
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
-                    var drawPropertiesSignature = $"bool {componentTypeName}::DrawProperties(bool{(hasHiddenFields ? " showHidden" : "/*showHidden*/")})";
-                    using (codeGenerator.EnterFunction(drawPropertiesSignature))
+                    var drawPropertiesSignature = $"bool { componentTypeName }::DrawProperties(bool{ ( hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/" ) })";
+                    using( codeGenerator.EnterFunction( drawPropertiesSignature ) )
                     {
-                        if (hasFields)
+                        codeGenerator.Append("using namespace Ui;");
+                        codeGenerator.Append("bool isModified = false;");
+                        foreach( var field in component.Fields )
                         {
-                            codeGenerator.Append("using namespace Ui;");
-                            codeGenerator.Append("bool isModified = false;");
-                            foreach (var field in component.Fields)
+                            if( field.IsHidden )
+                                continue;
+
+                            if( field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute )
                             {
-                                if (field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute)
-                                {
-                                    codeGenerator.Append($"PropertyGrid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
-                                }
-
-                                // Hidden should be overridable by the editor
-                                var scopeName = field.IsHidden ? "if (showHidden)" : "";
-
-                                IFieldEditor? editor = null;
-                                if (field.GetAttribute<Editor>() is Editor customEditorAttribute)
-                                {
-                                    editor = Editors.GetEditor(customEditorAttribute.Value);
-                                }
-                                else
-                                {
-                                    editor = Editors.GetEditor(field);
-                                }
-                                
-                                var fieldEditor = editor ?? new DefaultEditor();
-                                if (scopeName.IsNullOrEmpty() && (field.IsReadOnly == false))
-                                {
-                                    fieldEditor.Generate(codeGenerator, field);
-                                }
-                                else
-                                {
-                                    using (codeGenerator.EnterScope(scopeName))
-                                    {
-                                        if (field.IsReadOnly)
-                                        {
-                                            codeGenerator.Append("ScopedImGuiDisabled _;");
-                                        }
-
-                                        fieldEditor.Generate(codeGenerator, field);
-                                    }
-                                }
+                                codeGenerator.Append($"PropertyGrid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
                             }
 
-                            codeGenerator.Append("return isModified;");
+                            // Hidden should be overridable by the editor
+                            var scopeName = field.IsRuntimeOnly ? "if (forceShow)" : "";
+
+                            IFieldEditor? editor = null;
+                            if (field.GetAttribute<Editor>() is Editor customEditorAttribute)
+                            {
+                                editor = Editors.GetEditor(customEditorAttribute.Value);
+                            }
+                            else
+                            {
+                                editor = Editors.GetEditor(field);
+                            }
+
+                            var fieldEditor = editor ?? new DefaultEditor();
+                            if (scopeName.IsNullOrEmpty() && (field.IsReadOnly == false))
+                            {
+                                fieldEditor.Generate(codeGenerator, field);
+                            }
+                            else
+                            {
+                                using (codeGenerator.EnterScope(scopeName))
+                                {
+                                    if (field.IsReadOnly)
+                                    {
+                                        codeGenerator.Append("ScopedImGuiDisabled _;");
+                                    }
+
+                                    fieldEditor.Generate(codeGenerator, field);
+                                }
+                            }
                         }
+
+                        codeGenerator.Append("return isModified;");
                     }
                 }
             }
@@ -392,50 +389,79 @@ namespace Onyx.CodeGen.ComponentDSL
                 var trimmed = componentDefinitionLines[i].Trim();
                 if (trimmed.StartsWith('[') && trimmed.EndsWith(']'))
                 {
-                    var attributeStrings = trimmed[1..^1].Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                    foreach (var attributeString in attributeStrings)
-                    {
-                        var index = attributeString.IndexOf('(');
-                        var endIndex = attributeString.IndexOf(')');
-                        var attributeTypeString = index == -1 ? attributeString : attributeString[0..index];
-                        var attributeParam = index == -1 ? "" : attributeString[(index+1)..endIndex];
+                    var attributeStrings = trimmed[1..];
 
-                        if (attributeParam.StartsWith('"')  && attributeParam.EndsWith('"'))
+                    string attributeParameterString = "";
+                    string attributeTypeString = "";
+                    List<string> attributeParameters = [];
+                    bool isInAttributeParameters = false;
+                    foreach (char c in attributeStrings)
+                    {
+                        if (c == '(')
                         {
-                            attributeParam = attributeParam[1..^1];
+                            isInAttributeParameters = true;
+                            continue;
                         }
 
-                        var attribute = ANNOTATION_ATTRIBUTES.Where(attributeType =>
+                        if ((c == ')') || (c == ']'))
                         {
-                            var nameAttribute = attributeType.GetCustomAttribute<Name>(inherit: true);
-                            string attributeName = nameAttribute?.Value ?? attributeType.Name;
-                            return attributeName.Equals(attributeTypeString, StringComparison.OrdinalIgnoreCase);
-       
-                        }).FirstOrDefault();
+                            isInAttributeParameters = false;
 
-                        if (attribute != null)
+                            if (string.IsNullOrEmpty(attributeParameterString) == false)
+                            {
+                                attributeParameters.Add(attributeParameterString);
+                                attributeParameterString = "";
+                            }
+
+                            if (Attributes.GetAttribute(attributeTypeString.Trim(), attributeParameters.ToArray()) is Attribute newAttribute)
+                            {
+                                attributeTypeString = string.Empty;
+                                attributeParameters.Clear();
+                                attributes.Add(newAttribute);
+                            }
+
+                            continue;
+                        }
+
+                        if (c == ',')
                         {
-                            object? newAttribute = null;
-                            if (string.IsNullOrEmpty(attributeParam))
+                            if (isInAttributeParameters)
                             {
-                                newAttribute = Activator.CreateInstance(attribute);
+                                attributeParameters.Add(attributeParameterString);
+                                attributeParameterString = "";
                             }
-                            else
+                            else if ( string.IsNullOrEmpty(attributeTypeString) == false )
                             {
-                                var ctorArguments = attribute.GetConstructors().First().GetParameters();
-                                object? t = Convert.ChangeType(attributeParam, ctorArguments[0].ParameterType);
-                                newAttribute = Activator.CreateInstance(attribute, t);
+                                if( string.IsNullOrEmpty(attributeParameterString) == false )
+                                {
+                                    attributeParameters.Add(attributeParameterString);
+                                    attributeParameterString = "";
+                                }
+
+                                if (Attributes.GetAttribute(attributeTypeString.Trim(), attributeParameters.ToArray()) is Attribute newAttribute)
+                                {
+                                    attributeTypeString = string.Empty;
+                                    attributeParameters.Clear();
+                                    attributes.Add(newAttribute);
+                                }
                             }
-                            
-                            if (newAttribute != null)
-                            {
-                                attributes.Add((Attribute)newAttribute);
-                            }
+                            continue;
+                        }
+
+                        if (isInAttributeParameters)
+                        {
+                            attributeParameterString += c;
+                        }
+                        else
+                        {
+                            attributeTypeString += c;
                         }
                     }
-                    
+
                     continue;
                 }
+
+                //TODO: cleanup invalid attributes
 
                 if (trimmed.StartsWith('{') && (isComponentBlock == false))
                 {
@@ -465,7 +491,7 @@ namespace Onyx.CodeGen.ComponentDSL
                     continue;
                 }
 
-                var parts = trimmed.Split([' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var parts = trimmed.Split([' ', ';', '=', '{', '}', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (parts.IsNullOrEmpty())
                 {
                     continue;
@@ -474,12 +500,20 @@ namespace Onyx.CodeGen.ComponentDSL
                 var typeName = parts[0];
                 Core.Type? type = typeDatabase.ResolveTypeName(typeName, currentNamespace);
 
+                string defaultValue = string.Empty;
+                bool hasDefaultValue = trimmed.Any(c => c == '=' || c == '{');
+                if (hasDefaultValue)
+                {
+                    defaultValue = string.Join(", ", parts[2..].Select(value => value + GetFormatLiteral( type, value ) ) );
+                }
+
                 Field field = new Field
-                { 
+                {
                     FallbackTypeName = parts[0],
                     Type = type,
                     Attributes = new List<Attribute>(attributes),
-                    Name = parts[1]
+                    Name = parts[1],
+                    DefaultValue = defaultValue
                 };
 
                 attributes.Clear();
@@ -487,6 +521,17 @@ namespace Onyx.CodeGen.ComponentDSL
             }
 
             return components;
+        }
+
+        private string GetFormatLiteral(Core.Type? type, string valueLiteral)
+        {
+            if (type == null)
+                return valueLiteral;
+
+            if ( DSLTypes.TYPE_TO_LITERAL_SUFFIX.TryGetValue(type.Name, out string? literalSuffix) )
+                return literalSuffix;
+
+            return "";
         }
     }
 }

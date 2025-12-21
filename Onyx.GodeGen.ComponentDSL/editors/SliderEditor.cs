@@ -24,18 +24,18 @@ namespace Onyx.CodeGen.ComponentDSL
         {
             object? min = null;
             object? max = null;
-            if (field.GetAttribute<Range>() is Range range)
+            if (field.GetAttribute<RangeAttribute>() is RangeAttribute range)
             {
                 min = range.Min;
                 max = range.Max;
             }
 
-            if (field.GetAttribute<Min>() is Min minAttribute)
+            if (field.GetAttribute<MinAttribute>() is MinAttribute minAttribute)
             {
                 min = minAttribute.Value;
             }
 
-            if (field.GetAttribute<Max>() is Max maxAttribute)
+            if (field.GetAttribute<MaxAttribute>() is MaxAttribute maxAttribute)
             {
                 max = maxAttribute.Value;
             }
@@ -49,6 +49,12 @@ namespace Onyx.CodeGen.ComponentDSL
             if (max != null)
             {
                 numericOptions.Add($".Max = {max.ToString()}");
+            }
+
+            if (field.GetAttribute<UnitAttribute>() is UnitAttribute unitAttribute)
+            {
+                numericOptions.Add($".Unit = Units::{unitAttribute.Unit}");
+                numericOptions.Add($".DisplayUnit = Units::{unitAttribute.DisplayUnit}");
             }
 
             numericOptions.Add(".IsSlider = true");

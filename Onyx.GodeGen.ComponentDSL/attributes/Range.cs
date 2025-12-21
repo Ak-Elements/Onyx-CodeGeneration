@@ -1,12 +1,12 @@
 ﻿namespace Onyx.CodeGen.ComponentDSL
 {
-    [Name("Range"), MutuallyExclusive(typeof(Min), typeof(Max))]
-    internal class Range : Attribute
+    [Precedence(typeof(MinAttribute), typeof(MinAttribute))]
+    internal class RangeAttribute : Attribute
     {
         internal object Min { get; }
         internal object Max { get; }
 
-        protected Range(object min, object max)
+        protected RangeAttribute( object min, object max )
         {
             Min = min;
             Max = max;

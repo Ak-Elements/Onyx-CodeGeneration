@@ -52,18 +52,18 @@ namespace Onyx.CodeGen.ComponentDSL
         {
             object? min = null;
             object? max = null;
-            if (field.GetAttribute<Range>() is Range range)
+            if (field.GetAttribute<RangeAttribute>() is RangeAttribute range)
             {
                 min = range.Min;
                 max = range.Max;
             }
 
-            if (field.GetAttribute<Min>() is Min minAttribute)
+            if (field.GetAttribute<MinAttribute>() is MinAttribute minAttribute)
             {
                 min = minAttribute.Value;
             }
 
-            if (field.GetAttribute<Max>() is Max maxAttribute)
+            if (field.GetAttribute<MaxAttribute>() is MaxAttribute maxAttribute)
             {
                 max = maxAttribute.Value;
             }
@@ -79,13 +79,30 @@ namespace Onyx.CodeGen.ComponentDSL
                 numericOptions.Add($".Max = {max.ToString()}");
             }
 
-            if (numericOptions.Any())
+            if (field.GetAttribute<UnitAttribute>() is UnitAttribute unitAttribute)
             {
-                codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name}, {{ { string.Join(", " ,numericOptions) } }} );");
+                using (codeGenerator.EnterScope())
+                {
+                    codeGenerator.Append($"auto displayUnit = QuanityCast<{unitAttribute.DisplayUnit}, {unitAttribute.Unit}>({field.Name});");
+
+                    var propertyGridCall = numericOptions.Any() ?
+                        $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
+                        $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit)";
+
+                    using (codeGenerator.EnterScope($"if( ${propertyGridCall} )"))
+                    {
+                        codeGenerator.Append($"{field.Name} = QuanityCast<{unitAttribute.Unit}, {unitAttribute.DisplayUnit}>(displayUnit);");
+                        codeGenerator.Append($"isModified = true;");
+                    }
+                }
             }
             else
             {
-                codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name});");
+                var propertyGridCall = numericOptions.Any() ?
+                    $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name}, {{ {string.Join(", ", numericOptions)} }} )" :
+                    $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name})";
+
+                codeGenerator.Append($"isModified |= {propertyGridCall};");
             }
         }  
     }
