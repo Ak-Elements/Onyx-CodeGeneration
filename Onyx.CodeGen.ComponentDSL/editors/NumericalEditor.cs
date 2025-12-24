@@ -83,15 +83,15 @@ namespace Onyx.CodeGen.ComponentDSL
             {
                 using (codeGenerator.EnterScope())
                 {
-                    codeGenerator.Append($"auto displayUnit = QuanityCast<{unitAttribute.DisplayUnit}, {unitAttribute.Unit}>({field.Name});");
+                    codeGenerator.Append($"auto displayUnit = QuantityCast<Units::{unitAttribute.DisplayUnit}, Units::{unitAttribute.Unit}>({field.Name});");
 
                     var propertyGridCall = numericOptions.Any() ?
                         $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
                         $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit)";
 
-                    using (codeGenerator.EnterScope($"if( ${propertyGridCall} )"))
+                    using (codeGenerator.EnterScope($"if( {propertyGridCall} )"))
                     {
-                        codeGenerator.Append($"{field.Name} = QuanityCast<{unitAttribute.Unit}, {unitAttribute.DisplayUnit}>(displayUnit);");
+                        codeGenerator.Append($"{field.Name} = QuantityCast<Units::{unitAttribute.Unit}, Units::{unitAttribute.DisplayUnit}>(displayUnit);");
                         codeGenerator.Append($"isModified = true;");
                     }
                 }

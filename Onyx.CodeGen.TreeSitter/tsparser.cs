@@ -137,7 +137,7 @@ namespace Onyx.CodeGen.TreeSitter
         * this function returns `true`
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
-        //[return: MarshalAs(UnmanagedType.I1)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_parser_set_included_ranges(IntPtr parser, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] TSRange[] ranges, uint length);
 
         /**

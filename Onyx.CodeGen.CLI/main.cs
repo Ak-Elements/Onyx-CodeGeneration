@@ -1,126 +1,99 @@
 ﻿using Onyx.CodeGen.ComponentDSL;
 using Onyx.CodeGen.Core;
 using Onyx.CodeGen.Module;
-using System.CommandLine;
+using System.Runtime.Serialization;
 using Type = Onyx.CodeGen.Core.Type;
 
 namespace Onyx.CodeGen.CLI
 {
+    class TargetConfig
+    {
+        [DataMember(Name = "name")]
+        public string Name { get; set; } = string.Empty;
+
+        [DataMember(Name = "namespace")]
+        public string Namespace { get; set; } = string.Empty;
+
+        [DataMember(Name = "is_executable")]
+        public bool IsExecutable { get; set; }
+
+        [DataMember(Name = "source_files")]
+        public List<string> Sources { get; set; } = new List<string>();
+
+        [DataMember(Name = "include_directories")]
+        public List<string> IncludeDirectories { get; set; } = new List<string>();
+
+        [DataMember(Name = "generated_module_headers")]
+        public List<string> GeneratedModuleHeaders { get; set; } = new List<string>();
+    }
+
+    class Paths
+    {
+        [DataMember(Name = "project_dir")]
+        public string ProjectDirectory { get; set; } = string.Empty;
+
+        [DataMember(Name = "source_dir")]
+        public string SourceDirectory { get; set; } = string.Empty;
+
+        [DataMember(Name = "binary_dir")]
+        public string BinaryDirectory { get; set; } = string.Empty;
+
+        [DataMember(Name = "dependencies_dir")]
+        public string DependenciesDirectory { get; set; } = string.Empty;
+
+        [DataMember(Name = "public_dir_suffix")]
+        public string PublicDirectorySuffix { get; set; } = string.Empty;
+
+        [DataMember(Name = "private_dir_suffix")]
+        public string PrivateDirectorySuffix { get; set; } = string.Empty;
+
+        [DataMember(Name = "generated_dir_suffix")]
+        public string GeneratedDirectorySuffix { get; set; } = "generated";
+
+        [DataMember(Name = "editor_binary_dir")]
+        public string PrivateEditorBinaryDirectory { get; set; } = string.Empty;
+    }
+
+
+    class Config
+    {
+        [DataMember(Name = "target")]
+        public TargetConfig TargetConfig { get; set; } = new TargetConfig();
+        public Paths Paths { get; set; } = new Paths();
+
+
+    }
+
     internal class Program
     {
         static void Main(string[] args)
         {
-            RootCommand rootCommand = [CreateProjectCommand(), CreateModuleCommand()];
-            rootCommand.Parse(args).Invoke();
+            if (args.Length < 2)
+            {
+                Console.Error.WriteLine("Missing command. Expected module or project");
+                Console.Error.WriteLine("   onyx-codegen module [path to config]");
+                Console.Error.WriteLine("   onyx-codegen project [path to config]");
+            }
+
+            string command = args[0];
+            string configPath = args[1];
+            var alltext = File.ReadAllText(configPath);
+            var config = Tomlyn.Toml.ToModel<Config>(alltext, configPath);
+
+            RunModuleCodeGeneration(config);
+            if( config.TargetConfig.IsExecutable )
+            {
+                RunProjectBootstrapGeneration(config);
+            };
         }
 
-        static Command CreateProjectCommand()
+        static void RunProjectBootstrapGeneration(Config config)
         {
-            var cmd = new Command("project", "Generate init code for a project.");
+            var outPath = Path.Combine(config.Paths.BinaryDirectory, config.Paths.PrivateDirectorySuffix, "init.gen.cpp");
+            var projectGeneratedCodePath = config.Paths.BinaryDirectory;
 
-            var binaryDirOpt = new Option<string>("--binary-dir")
-            {
-                Description = "Module binary directory",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-                Required = true
-            };
-
-            var outDirOpt = new Option<string>("--out-dir")
-            {
-                Description = "Output directory",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-                Required = true
-            };
-           
-            cmd.Add(binaryDirOpt);
-            cmd.Add(outDirOpt);
-            cmd.SetAction(RunProjectBootstrapGeneration);
-
-            return cmd;
-        }
-
-
-        static Command CreateModuleCommand()
-        {
-            var cmd = new Command("module", "Generate code for an engine/project module.");
-
-            var targetOpt = new Option<string>("--target")
-            {
-                Description = "CMake target name",
-                Required = true
-            };
-
-            var namespaceOpt = new Option<string>("--namespace")
-            {
-                Description = "C++ namespace",
-                Required = true
-            };
-
-            var sourceDirOpt = new Option<string>("--source-dir")
-            {
-                Description = "Module source directory",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-                Required = true
-            };
-
-            var binaryDirOpt = new Option<string>("--binary-dir")
-            {
-                Description = "Module binary directory",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-                Required = true
-            };
-
-            var generatedDirOpt = new Option<string>(
-                "--generated-dir")
-            {
-                Description = "Generated output directory",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-                DefaultValueFactory = (_) => "generated",
-                
-            };
-            
-            var publicDirOpt = new Option<string>("--public-dir")
-            {
-                Description = "Public include directory (relative)",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-            };
-
-            var privateDirOpt = new Option<string>("--private-dir")
-            {
-                Description = "Private include directory (relative)",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-            };
-
-            var privateEditorBinaryDirOpt = new Option<string>("--editor-dir")
-            {
-                Description = "Private binary directory for the editor module",
-                DefaultValueFactory = (_) => "",
-                CustomParser = result => result.Tokens.First().Value.Replace('\\', '/'),
-            };
-
-            cmd.Add(targetOpt);
-            cmd.Add(namespaceOpt);
-            cmd.Add(sourceDirOpt);
-            cmd.Add(binaryDirOpt);
-            cmd.Add(generatedDirOpt);
-            cmd.Add(publicDirOpt);
-            cmd.Add(privateDirOpt);
-            cmd.Add(privateEditorBinaryDirOpt);
-
-            cmd.SetAction(RunModuleCodeGeneration);
-
-            return cmd;
-        }
-
-        static void RunProjectBootstrapGeneration(ParseResult result)
-        {
-            var outPath = result.GetRequiredValue<string>("--out-dir");
-            var projectGeneratedCodePath = result.GetRequiredValue<string>("--binary-dir"); 
-            var generatedModuleHeadersFile = Path.Combine(projectGeneratedCodePath, "generatedmoduleheaders");
-            var includesPath = Path.Combine(projectGeneratedCodePath, "includedirectories");
-
-            IReadOnlyList<string> includeDirectories = File.ReadAllLines(includesPath);
-            IEnumerable<string> generatedModuleHeaderPaths = File.ReadAllLines(generatedModuleHeadersFile).Distinct();
+            IReadOnlyList<string> includeDirectories = config.TargetConfig.IncludeDirectories;
+            IEnumerable<string> generatedModuleHeaderPaths = config.TargetConfig.GeneratedModuleHeaders.Distinct();
             
             CodeGenerator codeGenerator = new CodeGenerator();
             List<Type> outTypes;
@@ -162,16 +135,16 @@ namespace Onyx.CodeGen.CLI
             File.WriteAllText(outPath, codeGenerator.GetCode());
         }
 
-        static void RunModuleCodeGeneration(ParseResult result)
+        static void RunModuleCodeGeneration(Config config)
         {
-            string targetName = result.GetRequiredValue<string>("--target")!;
-            string targetNamespace = result.GetRequiredValue<string>("--namespace")!;
-            string sourceDir = result.GetRequiredValue<string>("--source-dir")!;
-            string binaryDir = result.GetRequiredValue<string>("--binary-dir")!;
-            string generatedPathSuffix = result.GetValue<string>("--generated-dir") ?? "generated";
-            string publicPathSuffix = result.GetRequiredValue<string>("--public-dir");
-            string privatePathSuffix = result.GetRequiredValue<string>("--private-dir");
-            string editorDir = result.GetValue<string>("--editor-dir") ?? "";
+            string targetName = config.TargetConfig.Name;
+            string targetNamespace = config.TargetConfig.Namespace;
+            string sourceDir = config.Paths.SourceDirectory;
+            string binaryDir = config.Paths.BinaryDirectory;
+            string generatedPathSuffix = config.Paths.GeneratedDirectorySuffix;
+            string publicPathSuffix = config.Paths.PublicDirectorySuffix;
+            string privatePathSuffix = config.Paths.PrivateDirectorySuffix;
+            string editorDir = config.Paths.PrivateEditorBinaryDirectory ?? "";
 
             var outPublicPath = binaryDir + "/" + generatedPathSuffix + "/" + publicPathSuffix;
             var outPrivatePath = binaryDir + "/" + generatedPathSuffix + "/" + privatePathSuffix;
@@ -179,26 +152,13 @@ namespace Onyx.CodeGen.CLI
             // only used for engine modules
             var outEditorPrivatePath = editorDir.Replace('\\', '/'); // base target output path for editor files (binary directory)
 
-            var sourcesPath = Path.Combine(binaryDir, "sourcefiles"); // public sources of target
-            var includesPath = Path.Combine(binaryDir, "includedirectories"); // include directories of target
-
+        
             // output containing all files generated so consecutive runs can delete files that are no longer valid
             var generatedFilesPath = Path.Combine(binaryDir, "generatedfiles");
 
-            if (File.Exists(sourcesPath) == false)
-            {
-                Console.Error.WriteLine($"Sources file(path:{sourcesPath}) does not exist");
-                return;
-            }
 
-            if (File.Exists(includesPath) == false)
-            {
-                Console.Error.WriteLine($"Include directories file(path:{includesPath}) does not exist");
-                return;
-            }
-
-            IEnumerable<string> sources = File.ReadAllLines(sourcesPath);
-            IEnumerable<string> includeDirectories = File.ReadAllLines(includesPath);
+            IEnumerable<string> sources = config.TargetConfig.Sources;
+            IEnumerable<string> includeDirectories = config.TargetConfig.IncludeDirectories.Where(includeDirectory => includeDirectory.StartsWith(config.Paths.ProjectDirectory) && includeDirectory.StartsWith(config.Paths.DependenciesDirectory) == false);
             IEnumerable<string> oldGeneratedFiles = File.Exists(generatedFilesPath) ? File.ReadAllLines(generatedFilesPath) : Enumerable.Empty<string>();
 
             foreach (var includeDirectory in includeDirectories.Distinct())

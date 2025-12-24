@@ -45,12 +45,6 @@ namespace Onyx.CodeGen.TreeSitter
         public string current_field() { return lang.fields[current_field_id()]; }
         public string current_symbol()
         {
-            if (lang == null || lang.symbols == null)
-            {
-                Console.WriteLine($"Langauge {lang} and missing symbols");
-            }
-            
-        
             ushort symbol = ts_tree_cursor_current_node(ref cursor).symbol();
             return (symbol != UInt16.MaxValue) ? lang.symbols[symbol] : "ERROR";
         }
