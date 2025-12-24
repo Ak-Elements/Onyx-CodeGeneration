@@ -21,8 +21,9 @@ namespace Onyx.CodeGen.Core
             source = File.ReadAllText(path);
             using (var parser = new TSParser())
             {
-                TSLanguage language = new TSLanguage(TsCpp.tree_sitter_cpp());
-                parser.set_language(language);
+                var treesitter_cpp = TsCpp.tree_sitter_cpp();
+                TSLanguage language = new TSLanguage(treesitter_cpp);
+                bool setLanguage = parser.set_language(language);
 
                 using (var tree = parser.parse_string(null, source))
                 {

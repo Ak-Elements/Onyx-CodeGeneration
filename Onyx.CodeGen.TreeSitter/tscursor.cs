@@ -26,8 +26,8 @@ namespace Onyx.CodeGen.TreeSitter
 
         public TSCursor(TSNode node, TSLanguage lang)
         {
-            this.cursor = ts_tree_cursor_new(node);
             this.lang = lang;
+            this.cursor = ts_tree_cursor_new(node);
             Ptr = new IntPtr(1);
         }
 
@@ -45,6 +45,12 @@ namespace Onyx.CodeGen.TreeSitter
         public string current_field() { return lang.fields[current_field_id()]; }
         public string current_symbol()
         {
+            if (lang == null || lang.symbols == null)
+            {
+                Console.WriteLine($"Langauge {lang} and missing symbols");
+            }
+            
+        
             ushort symbol = ts_tree_cursor_current_node(ref cursor).symbol();
             return (symbol != UInt16.MaxValue) ? lang.symbols[symbol] : "ERROR";
         }
@@ -84,25 +90,25 @@ namespace Onyx.CodeGen.TreeSitter
         * possible using the `TSNode` functions. It is a mutable object that is always
         * on a certain syntax node, and can be moved imperatively to different nodes.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSTreeCursor ts_tree_cursor_new(TSNode node);
 
         /**
         * Delete a tree cursor, freeing all of the memory that it used.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_tree_cursor_delete(ref TSTreeCursor cursor);
 
         /**
         * Re-initialize a tree cursor to start at a different node.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_tree_cursor_reset(ref TSTreeCursor cursor, TSNode node);
 
         /**
         * Get the tree cursor's current node.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_tree_cursor_current_node(ref TSTreeCursor cursor);
 
         /**
@@ -111,7 +117,7 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns `NULL` if the current node doesn't have a field.
         * See also `ts_node_child_by_field_name`.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_tree_cursor_current_field_name(ref TSTreeCursor cursor);
 
         /**
@@ -120,7 +126,7 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns zero if the current node doesn't have a field.
         * See also `ts_node_child_by_field_id`, `ts_language_field_id_for_name`.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern ushort ts_tree_cursor_current_field_id(ref TSTreeCursor cursor);
 
         /**
@@ -129,7 +135,7 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns `true` if the cursor successfully moved, and returns `false`
         * if there was no parent node (the cursor was already on the root node).
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_parent(ref TSTreeCursor cursor);
 
@@ -139,7 +145,7 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns `true` if the cursor successfully moved, and returns `false`
         * if there was no next sibling node.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_next_sibling(ref TSTreeCursor cursor);
 
@@ -149,7 +155,7 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns `true` if the cursor successfully moved, and returns `false`
         * if there were no children.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_tree_cursor_goto_first_child(ref TSTreeCursor cursor);
 
@@ -160,13 +166,13 @@ namespace Onyx.CodeGen.TreeSitter
         * This returns the index of the child node if one was found, and returns -1
         * if no such child was found.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern long ts_tree_cursor_goto_first_child_for_byte(ref TSTreeCursor cursor, uint byteOffset);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern long ts_tree_cursor_goto_first_child_for_point(ref TSTreeCursor cursor, TSPoint point);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSTreeCursor ts_tree_cursor_copy(ref TSTreeCursor cursor);
         #endregion
     }

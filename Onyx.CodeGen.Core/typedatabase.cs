@@ -32,7 +32,7 @@ namespace Onyx.CodeGen.Core
 
                     types[type.FullyQualifiedName] = type;
                 }
-            });
+            );
 
             globalFunctions = new ConcurrentBag<Function>(globalFunctions.Distinct());
 
@@ -185,8 +185,13 @@ namespace Onyx.CodeGen.Core
                         continue;
                     }
                 }
-
-                inheritanceChain.AddRange(ResolveFullInhertiance(baseType, inheritanceCache));
+                
+                // avoid endless recursion if the type inherits from itself but not using CRTP - this seems to be the case in a libstdc++ header
+                // TODO: investigate further and do a proper fix for the inheritance resolve 
+                if (baseType != type)
+                {
+                    inheritanceChain.AddRange(ResolveFullInhertiance(baseType, inheritanceCache));
+                }
             }
 
             inheritanceCache[type.FullyQualifiedName] = inheritanceChain.ToList();

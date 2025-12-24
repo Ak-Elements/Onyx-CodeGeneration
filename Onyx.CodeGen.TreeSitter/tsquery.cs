@@ -35,46 +35,46 @@ namespace Onyx.CodeGen.TreeSitter
         public void disable_pattern(uint patternIndex) { ts_query_disable_pattern(Ptr, patternIndex); }
 
         #region PInvoke
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_query_delete(IntPtr query);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_query_pattern_count(IntPtr query);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_query_capture_count(IntPtr query);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_query_string_count(IntPtr query);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_query_start_byte_for_pattern(IntPtr query, uint patternIndex);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_query_predicates_for_pattern(IntPtr query, uint patternIndex, out uint length);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_query_is_pattern_rooted(IntPtr query, uint patternIndex);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_query_is_pattern_non_local(IntPtr query, uint patternIndex);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_query_is_pattern_guaranteed_at_step(IntPtr query, uint byteOffset);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_query_capture_name_for_id(IntPtr query, uint id, out uint length);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSQuantifier ts_query_capture_quantifier_for_id(IntPtr query, uint patternId, uint captureId);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_query_string_value_for_id(IntPtr query, uint id, out uint length);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_query_disable_capture(IntPtr query, [MarshalAs(UnmanagedType.LPUTF8Str)] string captureName, uint captureNameLength);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_query_disable_pattern(IntPtr query, uint patternIndex);
         #endregion
     }}

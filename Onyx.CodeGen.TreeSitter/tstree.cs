@@ -40,32 +40,32 @@ namespace Onyx.CodeGen.TreeSitter
         * You need to copy a syntax tree in order to use it on more than one thread at
         * a time, as syntax trees are not thread safe.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_tree_copy(IntPtr tree);
 
         /**
         * Delete the syntax tree, freeing all of the memory that it used.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_tree_delete(IntPtr tree);
 
         /**
         * Get the root node of the syntax tree.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_tree_root_node(IntPtr tree);
 
         /**
         * Get the root node of the syntax tree, but with its position
         * shifted forward by the given offset.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_tree_root_node_with_offset(IntPtr tree, uint offsetBytes, TSPoint offsetPoint);
 
         /**
         * Get the language that was used to parse the syntax tree.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_tree_language(IntPtr tree);
 
         /**
@@ -73,10 +73,10 @@ namespace Onyx.CodeGen.TreeSitter
         *
         * The returned pointer must be freed by the caller.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_tree_included_ranges(IntPtr tree, out uint length);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_tree_included_ranges_free(IntPtr ranges);
 
         /**
@@ -86,7 +86,7 @@ namespace Onyx.CodeGen.TreeSitter
         * You must describe the edit both in terms of byte offsets and in terms of
         * (row, column) coordinates.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_tree_edit(IntPtr tree, ref TSInputEdit edit);
 
         /**
@@ -103,7 +103,7 @@ namespace Onyx.CodeGen.TreeSitter
         * for freeing it using `free`. The length of the array will be written to the
         * given `length` pointer.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_tree_get_changed_ranges(IntPtr old_tree, IntPtr new_tree, out uint length);
         #endregion
     }

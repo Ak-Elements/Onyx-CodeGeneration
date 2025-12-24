@@ -491,7 +491,8 @@ namespace Onyx.CodeGen.ComponentDSL
                     continue;
                 }
 
-                var parts = trimmed.Split([' ', ';', '=', '{', '}', ','], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var splitCharacters = new char[] { ' ', ';', '=', '{', '}', ',' };
+                var parts = trimmed.Split(splitCharacters, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 if (parts.IsNullOrEmpty())
                 {
                     continue;

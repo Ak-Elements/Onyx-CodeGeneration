@@ -86,13 +86,13 @@ namespace Onyx.CodeGen.TreeSitter
         /**
         * Create a new parser.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_parser_new();
 
         /**
         * Delete the parser, freeing all of the memory that it used.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_parser_delete(IntPtr parser);
 
         /**
@@ -105,14 +105,14 @@ namespace Onyx.CodeGen.TreeSitter
         * and compare it to this library's `TREE_SITTER_LANGUAGE_VERSION` and
         * `TREE_SITTER_MIN_COMPATIBLE_LANGUAGE_VERSION` constants.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_parser_set_language(IntPtr parser, IntPtr language);
 
         /**
         * Get the parser's current language.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_parser_language(IntPtr parser);
 
         /**
@@ -136,7 +136,7 @@ namespace Onyx.CodeGen.TreeSitter
         * will not be assigned, and this function will return `false`. On success,
         * this function returns `true`
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         //[return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_parser_set_included_ranges(IntPtr parser, [In, MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 2)] TSRange[] ranges, uint length);
 
@@ -147,7 +147,7 @@ namespace Onyx.CodeGen.TreeSitter
         * or write to it. The length of the array will be written to the given
         * `length` pointer.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.LPArray, SizeParamIndex = 1)]
         private static extern TSRange[] ts_parser_included_ranges(IntPtr parser, out uint length);
 
@@ -157,7 +157,7 @@ namespace Onyx.CodeGen.TreeSitter
         * above. The second two parameters indicate the location of the buffer and its
         * length in bytes.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_parser_parse_string(IntPtr parser, IntPtr oldTree, [MarshalAs(UnmanagedType.LPUTF8Str)] string input, uint length);
 
         /**
@@ -166,7 +166,7 @@ namespace Onyx.CodeGen.TreeSitter
         * above. The second two parameters indicate the location of the buffer and its
         * length in bytes.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         //private static extern IntPtr ts_parser_parse_string_encoding(IntPtr parser, IntPtr oldTree, [MarshalAs(UnmanagedType.LPUTF8Str)] string input, uint length, TSInputEncoding encoding);
         private static extern IntPtr ts_parser_parse_string_encoding(IntPtr parser, IntPtr oldTree, [MarshalAs(UnmanagedType.LPWStr)] string input, uint length, TSInputEncoding encoding);
 
@@ -179,7 +179,7 @@ namespace Onyx.CodeGen.TreeSitter
         * and instead intend to use this parser to parse some other document, you must
         * call `ts_parser_reset` first.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_parser_reset(IntPtr parser);
 
         /**
@@ -189,13 +189,13 @@ namespace Onyx.CodeGen.TreeSitter
         * If parsing takes longer than this, it will halt early, returning NULL.
         * See `ts_parser_parse` for more information.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_parser_set_timeout_micros(IntPtr parser, ulong timeout);
 
         /**
         * Get the duration in microseconds that parsing is allowed to take.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern ulong ts_parser_timeout_micros(IntPtr parser);
 
         /**
@@ -205,13 +205,13 @@ namespace Onyx.CodeGen.TreeSitter
         * from this pointer during parsing. If it reads a non-zero value, it will
         * halt early, returning NULL. See `ts_parser_parse` for more information.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_parser_set_cancellation_flag(IntPtr parser, ref IntPtr flag);
 
         /**
         * Get the parser's current cancellation flag pointer.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_parser_cancellation_flag(IntPtr parser);
 
         /**
@@ -221,7 +221,7 @@ namespace Onyx.CodeGen.TreeSitter
         * previously assigned, the caller is responsible for releasing any memory
         * owned by the previous logger.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_parser_set_logger(IntPtr parser, _TSLoggerData logger);
         #endregion
     }

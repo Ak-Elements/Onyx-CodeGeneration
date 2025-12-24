@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Onyx.CodeGen.TreeSitter\Onyx.CodeGen.TreeSitter.csproj" />
+    <ProjectReference Include="../Onyx.CodeGen.TreeSitter/Onyx.CodeGen.TreeSitter.csproj" />
   </ItemGroup>
 
 </Project>

@@ -62,37 +62,37 @@ namespace Onyx.CodeGen.TreeSitter
         /**
         * Get the node's type as a null-terminated string.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_node_type(TSNode node);
 
         /**
         * Get the node's type as a numerical id.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern ushort ts_node_symbol(TSNode node);
 
         /**
         * Get the node's start byte.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_node_start_byte(TSNode node);
 
         /**
         * Get the node's start position in terms of rows and columns.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSPoint ts_node_start_point(TSNode node);
 
         /**
         * Get the node's end byte.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_node_end_byte(TSNode node);
 
         /**
         * Get the node's end position in terms of rows and columns.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSPoint ts_node_end_point(TSNode node);
 
         /**
@@ -101,10 +101,10 @@ namespace Onyx.CodeGen.TreeSitter
         * This string is allocated with `malloc` and the caller is responsible for
         * freeing it using `free`.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_node_string(TSNode node);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern void ts_node_string_free(IntPtr str);
 
         /**
@@ -112,7 +112,7 @@ namespace Onyx.CodeGen.TreeSitter
         * `ts_node_next_sibling` will return a null node to indicate that no such node
         * was found.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_is_null(TSNode node);
 
         /**
@@ -120,59 +120,59 @@ namespace Onyx.CodeGen.TreeSitter
         * grammar, whereas *anonymous* nodes correspond to string literals in the
         * grammar.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_is_named(TSNode node);
 
         /**
         * Check if the node is *missing*. Missing nodes are inserted by the parser in
         * order to recover from certain kinds of syntax errors.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_is_missing(TSNode node);
 
         /**
         * Check if the node is *extra*. Extra nodes represent things like comments,
         * which are not required the grammar, but can appear anywhere.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_is_extra(TSNode node);
 
         /**
         * Check if a syntax node has been edited.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_has_changes(TSNode node);
 
         /**
         * Check if the node is a syntax error or contains any syntax errors.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_has_error(TSNode node);
 
         /**
         * Get the node's immediate parent.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_parent(TSNode node);
 
         /**
         * Get the node's child at the given index, where zero represents the first
         * child.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_child(TSNode node, uint index);
 
         /**
         * Get the field name for node's child at the given index, where zero represents
         * the first child. Returns NULL, if no field is found.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern IntPtr ts_node_field_name_for_child(TSNode node, uint index);
 
         /**
         * Get the node's number of children.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_node_child_count(TSNode node);
 
         /**
@@ -180,7 +180,7 @@ namespace Onyx.CodeGen.TreeSitter
         *
         * See also `ts_node_is_named`.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_named_child(TSNode node, uint index);
 
         /**
@@ -188,7 +188,7 @@ namespace Onyx.CodeGen.TreeSitter
         *
         * See also `ts_node_is_named`.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern uint ts_node_named_child_count(TSNode node);
 
         /**
@@ -197,7 +197,7 @@ namespace Onyx.CodeGen.TreeSitter
         * You can convert a field name to an id using the
         * `ts_language_field_id_for_name` function.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_child_by_field_name(TSNode self, [MarshalAs(UnmanagedType.LPUTF8Str)] string field_name, uint field_name_length);
 
         /**
@@ -206,62 +206,62 @@ namespace Onyx.CodeGen.TreeSitter
         * You can convert a field name to an id using the
         * `ts_language_field_id_for_name` function.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_child_by_field_id(TSNode self, ushort fieldId);
 
         /**
         * Get the node's next / previous sibling.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_next_sibling(TSNode self);
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_prev_sibling(TSNode self);
 
         /**
         * Get the node's next / previous *named* sibling.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_next_named_sibling(TSNode self);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_prev_named_sibling(TSNode self);
 
         /**
         * Get the node's first child that extends beyond the given byte offset.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_first_child_for_byte(TSNode self, uint byteOffset);
 
         /**
         * Get the node's first named child that extends beyond the given byte offset.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_first_named_child_for_byte(TSNode self, uint byteOffset);
 
         /**
         * Get the smallest node within this node that spans the given range of bytes
         * or (row, column) positions.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_descendant_for_byte_range(TSNode self, uint startByte, uint endByte);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_descendant_for_point_range(TSNode self, TSPoint startPoint, TSPoint endPoint);
 
         /**
         * Get the smallest named node within this node that spans the given range of
         * bytes or (row, column) positions.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_named_descendant_for_byte_range(TSNode self, uint startByte, uint endByte);
 
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern TSNode ts_node_named_descendant_for_point_range(TSNode self, TSPoint startPoint, TSPoint endPoint);
 
         /**
         * Check if two nodes are identical.
         */
-        [DllImport("tree-sitter.dll", CallingConvention = CallingConvention.Cdecl)]
+        [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
         private static extern bool ts_node_eq(TSNode node1, TSNode node2);
         #endregion
     }

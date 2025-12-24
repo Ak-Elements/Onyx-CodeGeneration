@@ -13,25 +13,5 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
     <IsTrimmable>True</IsTrimmable>
   </PropertyGroup>
-
-  <ItemGroup>
-    <None Include="external/out\bin/tree-sitter.dll" />
-    <Content Include="external/out/bin/tree-sitter.dll" Visible="false">
-      <Link>tree-sitter.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="external/out/bin/tree-sitter-cpp.dll" />
-    <Content Include="external/out/bin/tree-sitter-cpp.dll" Visible="false">
-      <Link>tree-sitter-cpp.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="$(ProjectDir)external/build_tree_sitter.bat" />
-  </Target>
-
+  
 </Project>
