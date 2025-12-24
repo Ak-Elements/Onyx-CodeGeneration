@@ -68,7 +68,7 @@ namespace Onyx.CodeGen.CLI
     {
         static void Main(string[] args)
         {
-            if (args.Length != 0)
+            if (args.Length == 0)
             {
                 Console.Error.WriteLine("Missing toml config");
                 Console.Error.WriteLine("   onyx-codegen [path to config]");
