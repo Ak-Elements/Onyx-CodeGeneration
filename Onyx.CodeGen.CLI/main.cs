@@ -87,7 +87,7 @@ namespace Onyx.CodeGen.CLI
 
         static void RunProjectBootstrapGeneration(Config config)
         {
-            var outPath = Path.Combine(config.Paths.BinaryDirectory, config.Paths.PrivateDirectorySuffix, "init.gen.cpp");
+            var outPath = Path.Combine(config.Paths.BinaryDirectory, config.Paths.GeneratedDirectorySuffix, config.Paths.PrivateDirectorySuffix, "init.gen.cpp");
             var projectGeneratedCodePath = config.Paths.BinaryDirectory;
 
             IReadOnlyList<string> includeDirectories = config.TargetConfig.IncludeDirectories;
