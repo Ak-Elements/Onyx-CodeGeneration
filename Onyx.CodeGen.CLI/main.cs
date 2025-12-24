@@ -68,11 +68,10 @@ namespace Onyx.CodeGen.CLI
     {
         static void Main(string[] args)
         {
-            if (args.Length < 2)
+            if (args.Length != 0)
             {
-                Console.Error.WriteLine("Missing command. Expected module or project");
-                Console.Error.WriteLine("   onyx-codegen module [path to config]");
-                Console.Error.WriteLine("   onyx-codegen project [path to config]");
+                Console.Error.WriteLine("Missing toml config");
+                Console.Error.WriteLine("   onyx-codegen [path to config]");
             }
 
             string command = args[0];
