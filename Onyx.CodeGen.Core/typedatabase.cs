@@ -32,7 +32,7 @@ namespace Onyx.CodeGen.Core
 
                     types[type.FullyQualifiedName] = type;
                 }
-            );
+            });
 
             globalFunctions = new ConcurrentBag<Function>(globalFunctions.Distinct());
 
