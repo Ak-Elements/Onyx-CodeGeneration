@@ -17,6 +17,9 @@ namespace Onyx.CodeGen.CLI
         [DataMember(Name = "is_executable")]
         public bool IsExecutable { get; set; }
 
+        [DataMember(Name = "has_editor_target")]
+        public bool HasEditorTarget { get; set; }
+
         [DataMember(Name = "source_files")]
         public List<string> Sources { get; set; } = new List<string>();
 
@@ -51,17 +54,14 @@ namespace Onyx.CodeGen.CLI
         public string GeneratedDirectorySuffix { get; set; } = "generated";
 
         [DataMember(Name = "editor_binary_dir")]
-        public string PrivateEditorBinaryDirectory { get; set; } = string.Empty;
+        public string EditorBinaryDirectory { get; set; } = string.Empty;
     }
-
 
     class Config
     {
         [DataMember(Name = "target")]
         public TargetConfig TargetConfig { get; set; } = new TargetConfig();
         public Paths Paths { get; set; } = new Paths();
-
-
     }
 
     internal class Program
@@ -142,13 +142,13 @@ namespace Onyx.CodeGen.CLI
             string generatedPathSuffix = config.Paths.GeneratedDirectorySuffix;
             string publicPathSuffix = config.Paths.PublicDirectorySuffix;
             string privatePathSuffix = config.Paths.PrivateDirectorySuffix;
-            string editorDir = config.Paths.PrivateEditorBinaryDirectory ?? "";
+            string editorDir = config.Paths.EditorBinaryDirectory ?? "";
 
             var outPublicPath = binaryDir + "/" + generatedPathSuffix + "/" + publicPathSuffix;
             var outPrivatePath = binaryDir + "/" + generatedPathSuffix + "/" + privatePathSuffix;
 
             // only used for engine modules
-            var outEditorPrivatePath = editorDir.Replace('\\', '/'); // base target output path for editor files (binary directory)
+            var outEditorPath = editorDir.Replace('\\', '/'); // base target output path for editor files (binary directory)
 
         
             // output containing all files generated so consecutive runs can delete files that are no longer valid
@@ -182,7 +182,7 @@ namespace Onyx.CodeGen.CLI
                 generatedPathSuffix,
                 outPublicPath,
                 outPrivatePath,
-                outEditorPrivatePath,
+                outEditorPath,
                 includeDirectories,
                 moduleNamespaceStack);
             

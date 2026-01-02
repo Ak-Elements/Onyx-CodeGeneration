@@ -92,7 +92,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 }
 
                 {
-                    var editorCppPath = Path.Join(outEditorPath, relativePath, $"{outFileName}_editor.gen.cpp");
+                    var editorCppPath = Path.Join(outEditorPath, generatedPathSuffix, privatePathSuffix, relativePath, $"{outFileName}_editor.gen.cpp");
                     CodeGenerator codeGenerator = new CodeGenerator();
                     codeGenerator.AddIncludes(editorIncludes);
                     codeGenerator.AppendLine();
