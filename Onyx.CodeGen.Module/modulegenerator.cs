@@ -49,15 +49,15 @@ namespace Onyx.CodeGen.Module
                 .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var inputBindings = typeDatabase
-                .GetDerivedTypes("Onyx::Input::InputBinding")
+                .GetDerivedTypes("Onyx::InputActions::InputBinding")
                 .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var inputTriggers = typeDatabase
-                .GetDerivedTypes("Onyx::Input::InputTrigger")
+                .GetDerivedTypes("Onyx::InputActions::InputTrigger")
                 .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var inputModifiers = typeDatabase
-                .GetDerivedTypes("Onyx::Input::InputModifier")
+                .GetDerivedTypes("Onyx::InputActions::InputModifier")
                 .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
 
             var assetArgs = assets
@@ -86,9 +86,9 @@ namespace Onyx.CodeGen.Module
                 new RegisterCreateData(){FunctionName = "RegisterSerializers", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = serializers, AdditionalInclude = "onyx/assets/assetsystem.h" },
                 new RegisterCreateData(){FunctionName = "RegisterShaderGraphNodes", RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", Types = shaderGraphNodes, AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterRenderGraphNodes", RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", Types = renderGraphNodes, AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::Input::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/input/bindings/inputbindingsfactory.h"},
-                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::Input::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/input/triggers/inputtriggersfactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::Input::InputModifiersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/input/modifiers/inputmodifiersfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::InputActions::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"},
+                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::InputActions::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h" },
+                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::InputActions::InputModifiersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h" },
             };
             
             var cppFile = GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
