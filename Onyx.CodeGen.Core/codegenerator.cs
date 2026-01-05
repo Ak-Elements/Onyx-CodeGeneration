@@ -158,6 +158,10 @@ namespace Onyx.CodeGen.Core
 
         public IEnumerable<string> GetCodeLines()
         {
+            var code = GetCode();
+            if (string.IsNullOrWhiteSpace(code))
+                return Enumerable.Empty<string>();
+                
             return GetCode().Split(Environment.NewLine);
         }
 

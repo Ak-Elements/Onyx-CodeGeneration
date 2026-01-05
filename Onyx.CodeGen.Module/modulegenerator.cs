@@ -48,6 +48,15 @@ namespace Onyx.CodeGen.Module
                 .GetDerivedTypes("Onyx::Graphics::IRenderGraphNode")
                 .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
 
+            // get normal graph nodes
+            // filter out shader / rendergraph nodes
+            var nodeGraphNodes = typeDatabase
+                .GetDerivedTypes("Onyx::NodeGraph::Node")
+                .Except(shaderGraphNodes)
+                .Except(renderGraphNodes)
+                .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
+
+
             var inputBindings = typeDatabase
                 .GetDerivedTypes("Onyx::InputActions::InputBinding")
                 .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
@@ -84,6 +93,7 @@ namespace Onyx.CodeGen.Module
                 new RegisterCreateData(){FunctionName = "RegisterEngineSystems", RegisterFunction = "Onyx::EngineSystemFactory::Register", Types = engineSystems, AdditionalInclude = "onyx/engine/enginesystemfactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterAssets", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = assets, AdditionalInclude = "onyx/assets/assetsystem.h" },
                 new RegisterCreateData(){FunctionName = "RegisterSerializers", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = serializers, AdditionalInclude = "onyx/assets/assetsystem.h" },
+                new RegisterCreateData(){FunctionName = "RegisterGraphNodes", RegisterFunction = "Onyx::NodeGraph::NodeGraphFactory::Register", Types = nodeGraphNodes, AdditionalInclude = "onyx/nodegraph/nodegraphfactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterShaderGraphNodes", RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", Types = shaderGraphNodes, AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterRenderGraphNodes", RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", Types = renderGraphNodes, AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" },
                 new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::InputActions::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"},
@@ -115,13 +125,10 @@ namespace Onyx.CodeGen.Module
 
         private string GenerateModuleCpp(string outputPath, IEnumerable<Type> allArguments, IEnumerable<Type> engineSystems, IEnumerable<RegisterCreateData> registerCreateData)
         {
+            CodeGenerator systemRegistrationCodeGen = new CodeGenerator("");
+
             IReadOnlyList<Type> systemIncludes;
-            //IReadOnlyList<Type> assetCreationIncludes;
-            CodeGenerator onyxNamespaceCodeGen = new CodeGenerator("");
-            using (onyxNamespaceCodeGen.EnterScope("namespace Onyx"))
-            {
-                GenerateSystemsCode(onyxNamespaceCodeGen, engineSystems, out systemIncludes);
-            }
+            GenerateSystemsCode(systemRegistrationCodeGen, engineSystems, out systemIncludes);
 
             List<string> generatedFunctionCalls = new List<string>();
             List<string> generatedRegisterCodeBlocks = new List<string>();
@@ -141,7 +148,15 @@ namespace Onyx.CodeGen.Module
 
             generator.AppendLine();
             
-            generator.Append(onyxNamespaceCodeGen.GetCode());
+            var systemCreationCodeLines = systemRegistrationCodeGen.GetCodeLines();
+            if (systemCreationCodeLines.Any())
+            {
+                using (generator.EnterScope($"namespace Onyx"))
+                {
+                    generator.Append(systemCreationCodeLines);
+                }
+            }
+            
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
                 bool appendLine = false;
