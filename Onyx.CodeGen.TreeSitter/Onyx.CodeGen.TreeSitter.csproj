@@ -14,7 +14,7 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-    <Content Include="external/out/Release/*.so" Visible="false">
+    <Content Include="external/out/*.so" Visible="false">
       <Link>%(Filename)%(Extension)</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
