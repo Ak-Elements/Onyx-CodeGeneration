@@ -4,7 +4,7 @@ namespace Onyx.Codegen.Core
 {
     public static class MemberInfoExtension
     {
-        public static Type GetUnderlyingType(this MemberInfo member)
+        public static Type? GetUnderlyingType(this MemberInfo member)
         {
             switch (member.MemberType)
             {

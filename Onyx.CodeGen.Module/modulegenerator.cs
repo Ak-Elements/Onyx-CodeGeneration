@@ -1,4 +1,5 @@
 ﻿using Onyx.CodeGen.Core;
+using System.Reflection.Emit;
 using Type = Onyx.CodeGen.Core.Type;
 
 namespace Onyx.CodeGen.Module
@@ -11,18 +12,22 @@ namespace Onyx.CodeGen.Module
             public string RegisterFunction;
             public string AdditionalInclude;
             public IEnumerable<Type> Types;
+
+            public Func<Type, string> OverrideTypeName;
         }
 
         private string moduleName;
         private string moduleSourcePath;
+        private string moduleBinaryPath;
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
 
 
-        public ModuleGenerator(string moduleName, string moduleSourcePath, IEnumerable<string> moduleNamespaceStack, TypeDatabase typeDatabase)
+        public ModuleGenerator(string moduleName, string moduleSourcePath, string moduleBinaryPath, IEnumerable<string> moduleNamespaceStack, TypeDatabase typeDatabase)
         {
             this.moduleName = moduleName;
             this.moduleSourcePath = moduleSourcePath;
+            this.moduleBinaryPath = moduleBinaryPath;
             this.moduleNamespaceStack = moduleNamespaceStack;
             this.typeDatabase = typeDatabase;
         }
@@ -33,41 +38,48 @@ namespace Onyx.CodeGen.Module
 
             var engineSystems = typeDatabase.GetDerivedTypes("Onyx::IEngineSystem").Where(type => type.AbsolutePath.StartsWith(moduleSourcePath));
 
-            var assets = typeDatabase.GetTypesDerivedFromTemplate("Onyx::Assets::Asset");
-            assets = assets.Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+            var assets = typeDatabase.GetCurrentModuleTypesDerivedFromTemplate("Onyx::Assets::Asset");
+            assets = assets.Where(type => type.HasTypeId);
 
-            var serializers = typeDatabase.GetTypesDerivedFromTemplate("Onyx::Assets::AssetSerializer").Where(type => type.AbsolutePath.StartsWith(moduleSourcePath));
+            var serializers = typeDatabase.GetCurrentModuleTypesDerivedFromTemplate("Onyx::Assets::AssetSerializer");
 
             // get shader graph nodes
             var shaderGraphNodes = typeDatabase
-                .GetDerivedTypes("Onyx::Graphics::ShaderGraphNode")
-                .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .GetCurrentModuleDerivedTypes("Onyx::Graphics::ShaderGraphNode")
+                .Where(type => type.HasTypeId && (type is not TemplateType));
 
             // get rendergraph nodes
             var renderGraphNodes = typeDatabase
-                .GetDerivedTypes("Onyx::Graphics::IRenderGraphNode")
-                .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .GetCurrentModuleDerivedTypes("Onyx::Graphics::IRenderGraphNode")
+                .Where(type => type.HasTypeId && (type is not TemplateType));
 
             // get normal graph nodes
             // filter out shader / rendergraph nodes
             var nodeGraphNodes = typeDatabase
-                .GetDerivedTypes("Onyx::NodeGraph::Node")
+                .GetCurrentModuleDerivedTypes("Onyx::NodeGraph::Node")
                 .Except(shaderGraphNodes)
                 .Except(renderGraphNodes)
-                .Where(type => type.HasTypeId && (type is not TemplateType) && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .Where(type => type.HasTypeId && (type is not TemplateType));
 
 
             var inputBindings = typeDatabase
-                .GetDerivedTypes("Onyx::InputActions::InputBinding")
-                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .GetCurrentModuleDerivedTypes("Onyx::InputActions::InputBinding")
+                .Where(type => type.HasTypeId);
 
             var inputTriggers = typeDatabase
-                .GetDerivedTypes("Onyx::InputActions::InputTrigger")
-                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .GetCurrentModuleDerivedTypes("Onyx::InputActions::InputTrigger")
+                .Where(type => type.HasTypeId);
 
             var inputModifiers = typeDatabase
-                .GetDerivedTypes("Onyx::InputActions::InputModifier")
-                .Where(type => type.HasTypeId && type.AbsolutePath.StartsWith(moduleSourcePath));
+                .GetCurrentModuleDerivedTypes("Onyx::InputActions::InputModifier")
+                .Where(type => type.HasTypeId);
+
+            // component inspectors
+            var componentInspectors = typeDatabase
+                .GetCurrentModuleTypes()
+                .Where(type => type.FullyQualifiedName.StartsWith("Onyx::Ui::PropertyInspector<") &&
+                    (type is not TemplateType) &&
+                    (type.AbsolutePath.StartsWith(moduleSourcePath) || type.AbsolutePath.StartsWith(moduleBinaryPath)));
 
             var assetArgs = assets
                 .SelectMany(type => type.GetConstructorsOrStaticCreate() ?? Enumerable.Empty<Function>())
@@ -88,17 +100,87 @@ namespace Onyx.CodeGen.Module
 
             var headerFile = GenerateModuleHeader(outputPublicPath);
 
+            //var overrideInspectorFunctor = 
+
             List<RegisterCreateData> register = new List<RegisterCreateData>()
             {
-                new RegisterCreateData(){FunctionName = "RegisterEngineSystems", RegisterFunction = "Onyx::EngineSystemFactory::Register", Types = engineSystems, AdditionalInclude = "onyx/engine/enginesystemfactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterAssets", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = assets, AdditionalInclude = "onyx/assets/assetsystem.h" },
-                new RegisterCreateData(){FunctionName = "RegisterSerializers", RegisterFunction = "Onyx::Assets::AssetSystem::Register", Types = serializers, AdditionalInclude = "onyx/assets/assetsystem.h" },
-                new RegisterCreateData(){FunctionName = "RegisterGraphNodes", RegisterFunction = "Onyx::NodeGraph::NodeGraphFactory::Register", Types = nodeGraphNodes, AdditionalInclude = "onyx/nodegraph/nodegraphfactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterShaderGraphNodes", RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", Types = shaderGraphNodes, AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterRenderGraphNodes", RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", Types = renderGraphNodes, AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterInputBindings", RegisterFunction = "Onyx::InputActions::InputBindingsFactory::Register", Types = inputBindings, AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"},
-                new RegisterCreateData(){FunctionName = "RegisterInputTriggers", RegisterFunction = "Onyx::InputActions::InputTriggersFactory::Register", Types = inputTriggers, AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h" },
-                new RegisterCreateData(){FunctionName = "RegisterInputModifiers", RegisterFunction = "Onyx::InputActions::InputModifiersFactory::Register", Types = inputModifiers, AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h" },
+                new ()
+                {
+                    FunctionName = "RegisterEngineSystems",
+                    RegisterFunction = "Onyx::EngineSystemFactory::Register",
+                    Types = engineSystems,
+                    AdditionalInclude = "onyx/engine/enginesystemfactory.h"
+                },
+                new ()
+                {
+                    FunctionName = "RegisterAssets",
+                    RegisterFunction = "Onyx::Assets::AssetSystem::Register",
+                    Types = assets,
+                    AdditionalInclude = "onyx/assets/assetsystem.h"
+                },
+
+                new ()
+                {
+                    FunctionName = "RegisterSerializers", 
+                    RegisterFunction = "Onyx::Assets::AssetSystem::Register", 
+                    Types = serializers, 
+                    AdditionalInclude = "onyx/assets/assetsystem.h" },
+
+                new ()
+                {
+                    FunctionName = "RegisterGraphNodes", 
+                    RegisterFunction = "Onyx::NodeGraph::NodeGraphFactory::Register", 
+                    Types = nodeGraphNodes, 
+                    AdditionalInclude = "onyx/nodegraph/nodegraphfactory.h" },
+
+                new ()
+                {
+                    FunctionName = "RegisterShaderGraphNodes", 
+                    RegisterFunction = "Onyx::Graphics::ShaderGraphNodeFactory::Register", 
+                    Types = shaderGraphNodes, 
+                    AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" 
+                },
+                new ()
+                {
+                    FunctionName = "RegisterRenderGraphNodes", 
+                    RegisterFunction = "Onyx::Graphics::RenderGraphNodeFactory::Register", 
+                    Types = renderGraphNodes, 
+                    AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" 
+                },
+                new ()
+                {
+                    FunctionName = "RegisterInputBindings", 
+                    RegisterFunction = "Onyx::InputActions::InputBindingsFactory::Register", 
+                    Types = inputBindings, 
+                    AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"
+                },
+                new ()
+                {
+                    FunctionName = "RegisterInputTriggers", 
+                    RegisterFunction = "Onyx::InputActions::InputTriggersFactory::Register", 
+                    Types = inputTriggers, 
+                    AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h" 
+                },
+                new ()
+                {
+                    FunctionName = "RegisterInputModifiers", 
+                    RegisterFunction = "Onyx::InputActions::InputModifiersFactory::Register", 
+                    Types = inputModifiers, 
+                    AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h" 
+                },
+                new ()
+                {
+                    FunctionName = "RegisterPropertyInspectors", 
+                    RegisterFunction = "Onyx::Ui::PropertyInspectors::Register", 
+                    Types = componentInspectors, 
+                    AdditionalInclude = "onyx/ui/propertyinspector.h",
+                    OverrideTypeName = (Type type) => 
+                        {
+                            if ( typeDatabase.ResolveTypeName(type.SpecializedTemplateParameters[0], moduleNamespaceStack) is Type componentType )
+                                   return componentType.FullyQualifiedName;
+                            return type.SpecializedTemplateParameters[0]; 
+                        } 
+                }
             };
             
             var cppFile = GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
@@ -110,8 +192,7 @@ namespace Onyx.CodeGen.Module
 
         private string GenerateModuleHeader(string outputPath)
         {
-            CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_HEADER);
-            generator.Append("#pragma once");
+            CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER);
     
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
@@ -141,7 +222,7 @@ namespace Onyx.CodeGen.Module
                 }
             }
 
-            CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_HEADER);
+            CodeGenerator generator = new CodeGenerator();
             generator.AddIncludes(includes);
             generator.AddIncludes( systemIncludes.Select(type => type.IncludePath) );
             generator.AddIncludes( allArguments.Select(type => type.IncludePath) );
@@ -203,7 +284,8 @@ namespace Onyx.CodeGen.Module
                 {
                     outIncludes.Add(type.IncludePath);
 
-                    var trimmedTypeName = type.FullyQualifiedName.TrimFullyQualifiedName(moduleNamespaceStack);
+                    var fullyQualifiedTypeName = registerData.OverrideTypeName != null ? registerData.OverrideTypeName(type) : type.FullyQualifiedName;
+                    var trimmedTypeName = fullyQualifiedTypeName.TrimFullyQualifiedName(moduleNamespaceStack);
 
                     codeGenerator.Append($"{trimmedRegisterFn}<{trimmedTypeName}>();");
                 }

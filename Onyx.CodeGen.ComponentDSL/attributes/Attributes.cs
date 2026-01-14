@@ -49,28 +49,32 @@ namespace Onyx.CodeGen.ComponentDSL
                     else
                     {
                         // TODO: NAMED CONSTRUCT
-                        Attribute newAttribute = Activator.CreateInstance(attributeType) as Attribute;
-                        foreach (var param in parameters)
+                        if (Activator.CreateInstance(attributeType) is Attribute newAttribute)
                         {
-                            // is named parameter
-                            if (param.Contains('='))
+                            foreach (var param in parameters)
                             {
-                                string[] paramParts = param.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-                                var property = attributeType.GetProperty(paramParts[0], BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                                if (property.PropertyType.IsEnum)
+                                // is named parameter
+                                if (param.Contains('='))
                                 {
-                                    property.SetValue(newAttribute, Enum.Parse(property.PropertyType, paramParts[1]));
+                                    string[] paramParts = param.Split('=', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                                    var flags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
+                                    if (attributeType.GetProperty(paramParts[0], flags) is PropertyInfo property)
+                                    {
+                                        if ( property.PropertyType.IsEnum)
+                                        {
+                                            property.SetValue(newAttribute, Enum.Parse(property.PropertyType, paramParts[1]));
+                                        }
+                                        else
+                                        {
+                                            property.SetValue(newAttribute, Convert.ChangeType(paramParts[1], property.PropertyType));
+                                        }
+                                    }
                                 }
-                                else
-                                {
-                                    property.SetValue(newAttribute, Convert.ChangeType(paramParts[1], property.PropertyType));
-                                }                                
                             }
-                        }
 
-                        return newAttribute;
+                            return newAttribute;
+                        }
                     }
-                    
                 }
             }
 

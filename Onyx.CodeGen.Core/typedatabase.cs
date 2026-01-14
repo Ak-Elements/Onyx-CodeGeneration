@@ -4,11 +4,18 @@ namespace Onyx.CodeGen.Core
 {
     public class TypeDatabase
     {
+        private IEnumerable<string> modulePaths { get; set; } = Enumerable.Empty<string>();
+
         private ConcurrentDictionary<string, Type> types = new ConcurrentDictionary<string, Type>();
         private ConcurrentBag<Function> globalFunctions = new ConcurrentBag<Function>();
 
         public IReadOnlyDictionary<string, Type> Types { get => types; }
          
+        public TypeDatabase(IEnumerable<string> modulePaths)
+        {
+            this.modulePaths = modulePaths;
+        }
+
         public void Init(IEnumerable<string> sources, IEnumerable<string> includeDirectories)
         {
             Parallel.ForEach(sources, source =>
@@ -98,14 +105,29 @@ namespace Onyx.CodeGen.Core
             return types.Values;
         }
 
+        public IEnumerable<Type> GetCurrentModuleTypes()
+        {
+            return types.Values.Where(type => modulePaths.Any(path => type.AbsolutePath.StartsWith(path)));
+        }
+
         public IEnumerable<Type> GetDerivedTypes(string baseClass)
         {
             return types.Values.Where(t => t.Inherits.Contains(baseClass));
         }
 
+        public IEnumerable<Type> GetCurrentModuleDerivedTypes(string baseClass)
+        {
+            return GetCurrentModuleTypes().Where(t => t.Inherits.Contains(baseClass));
+        }
+
         public IEnumerable<Type> GetTypesDerivedFromTemplate(string templateBaseClass)
         {
             return types.Values.Where(t => t.Inherits.Any(baseClass => baseClass.StartsWith($"{templateBaseClass}<")));
+        }
+
+        public IEnumerable<Type> GetCurrentModuleTypesDerivedFromTemplate(string templateBaseClass)
+        {
+            return GetCurrentModuleTypes().Where(t => t.Inherits.Any(baseClass => baseClass.StartsWith($"{templateBaseClass}<")));
         }
 
         private IReadOnlyList<string> ResolveFullInhertiance(Type type, Dictionary<string, List<string>> inheritanceCache)
@@ -198,6 +220,11 @@ namespace Onyx.CodeGen.Core
             return inheritanceChain;
         }
 
+        public Type? ResolveTypeName(string typeName, IEnumerable<string> namespaceContext)
+        {
+            return ResolveTypeName(typeName, string.Join("::", namespaceContext));
+        }
+
         public Type? ResolveTypeName(string typeName, string namespaceContext)
         {
             Type? type;
@@ -221,6 +248,27 @@ namespace Onyx.CodeGen.Core
 
             // try to get closest match to typename even if namespace did not match
             return types.SingleOrDefault(type => type.Value.Name.Equals(typeName)).Value;
+        }
+
+        public void AddType(IEnumerable<string> typeHeaders, IEnumerable<string> includeDirectories)
+        {
+            foreach (string typeHeader in typeHeaders)
+            {
+                CppParser parser = new CppParser(includeDirectories);
+                List<Type> parsedTypes;
+                List<Function> parsedGlobalFunctions;
+                parser.Parse(typeHeader, out parsedGlobalFunctions, out parsedTypes);
+
+                foreach (var type in parsedTypes)
+                {
+                    if (types.ContainsKey(type.FullyQualifiedName))
+                    {
+                        continue;
+                    }
+
+                    types[type.FullyQualifiedName] = type;
+                }
+            }
         }
     }
 }

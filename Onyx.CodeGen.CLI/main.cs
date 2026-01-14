@@ -20,14 +20,14 @@ namespace Onyx.CodeGen.CLI
         [DataMember(Name = "has_editor_target")]
         public bool HasEditorTarget { get; set; }
 
+        [DataMember(Name = "is_editor_target")]
+        public bool IsEditorTarget { get; set; } = false;
+
         [DataMember(Name = "source_files")]
         public List<string> Sources { get; set; } = new List<string>();
 
         [DataMember(Name = "include_directories")]
         public List<string> IncludeDirectories { get; set; } = new List<string>();
-
-        [DataMember(Name = "generated_module_headers")]
-        public List<string> GeneratedModuleHeaders { get; set; } = new List<string>();
     }
 
     class Paths
@@ -44,17 +44,14 @@ namespace Onyx.CodeGen.CLI
         [DataMember(Name = "dependencies_dir")]
         public string DependenciesDirectory { get; set; } = string.Empty;
 
-        [DataMember(Name = "public_dir_suffix")]
-        public string PublicDirectorySuffix { get; set; } = string.Empty;
-
-        [DataMember(Name = "private_dir_suffix")]
-        public string PrivateDirectorySuffix { get; set; } = string.Empty;
+        [DataMember(Name = "namespace_dir_suffix")]
+        public string NamespaceDirectorySuffix { get; set; } = string.Empty;
 
         [DataMember(Name = "generated_dir_suffix")]
         public string GeneratedDirectorySuffix { get; set; } = "generated";
 
-        [DataMember(Name = "editor_binary_dir")]
-        public string EditorBinaryDirectory { get; set; } = string.Empty;
+        [DataMember(Name = "editor_target_binary_dir")]
+        public string EditorTargetBinaryDir { get; set; } = string.Empty;
     }
 
     class Config
@@ -87,18 +84,26 @@ namespace Onyx.CodeGen.CLI
 
         static void RunProjectBootstrapGeneration(Config config)
         {
-            var outPath = Path.Combine(config.Paths.BinaryDirectory, config.Paths.GeneratedDirectorySuffix, config.Paths.PrivateDirectorySuffix, "init.gen.cpp");
+            var outPath = Path.Combine(config.Paths.BinaryDirectory, config.Paths.GeneratedDirectorySuffix, "private", config.Paths.NamespaceDirectorySuffix, "init.gen.cpp");
             var projectGeneratedCodePath = config.Paths.BinaryDirectory;
 
             IReadOnlyList<string> includeDirectories = config.TargetConfig.IncludeDirectories;
-            IEnumerable<string> generatedModuleHeaderPaths = config.TargetConfig.GeneratedModuleHeaders.Distinct();
             
+            IEnumerable<string> generatedSourceFiles = [];
+            foreach (var includeDirectory in includeDirectories.Distinct())
+            {
+                if (string.IsNullOrEmpty(includeDirectory))
+                    continue;
+
+                generatedSourceFiles = generatedSourceFiles.Union(Directory.EnumerateFiles(includeDirectory, "*.gen.h", SearchOption.AllDirectories).Select(s => s.Replace('\\', '/')));
+            }
+
             CodeGenerator codeGenerator = new CodeGenerator();
             List<Type> outTypes;
             List<Function> globalFunctions;
             List<string> includes = new List<string>();
             IEnumerable<Function> allGlobalFunctions = Enumerable.Empty<Function>();
-            foreach (var moduleHeaderPath in generatedModuleHeaderPaths)
+            foreach (var moduleHeaderPath in generatedSourceFiles)
             {
                 CppParser parser = new CppParser(includeDirectories);
                 parser.Parse(moduleHeaderPath, out globalFunctions, out outTypes);
@@ -140,20 +145,17 @@ namespace Onyx.CodeGen.CLI
             string sourceDir = config.Paths.SourceDirectory;
             string binaryDir = config.Paths.BinaryDirectory;
             string generatedPathSuffix = config.Paths.GeneratedDirectorySuffix;
-            string publicPathSuffix = config.Paths.PublicDirectorySuffix;
-            string privatePathSuffix = config.Paths.PrivateDirectorySuffix;
-            string editorDir = config.Paths.EditorBinaryDirectory ?? "";
+            string namespacePathSuffix = config.Paths.NamespaceDirectorySuffix;
+            string editorBinaryDirPath = config.Paths.EditorTargetBinaryDir;
 
-            var outPublicPath = binaryDir + "/" + generatedPathSuffix + "/" + publicPathSuffix;
-            var outPrivatePath = binaryDir + "/" + generatedPathSuffix + "/" + privatePathSuffix;
-
-            // only used for engine modules
-            var outEditorPath = editorDir.Replace('\\', '/'); // base target output path for editor files (binary directory)
-
-        
+            var outPublicPath = Path.Join(binaryDir, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
+            var outPrivatePath = Path.Join(binaryDir, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
+            
+            var editorBinaryPublicPath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
+            var editorBinaryPrivatePath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
+            
             // output containing all files generated so consecutive runs can delete files that are no longer valid
             var generatedFilesPath = Path.Combine(binaryDir, "generatedfiles");
-
 
             IEnumerable<string> sources = config.TargetConfig.Sources;
             IEnumerable<string> includeDirectories = config.TargetConfig.IncludeDirectories.Where(includeDirectory => includeDirectory.StartsWith(config.Paths.ProjectDirectory) && includeDirectory.StartsWith(config.Paths.DependenciesDirectory) == false);
@@ -170,31 +172,37 @@ namespace Onyx.CodeGen.CLI
             IEnumerable<string> componentDefinitions = sources.Where(sourcePath => sourcePath.EndsWith(".ocd"));
             IEnumerable<string> cppSources = sources.Except(componentDefinitions);
 
-            TypeDatabase typeDatabase = new TypeDatabase();
+            TypeDatabase typeDatabase = new TypeDatabase([sourceDir, outPublicPath]);
             typeDatabase.Init(cppSources, includeDirectories);
 
             IEnumerable<string> moduleNamespaceStack = targetNamespace.Split("::");
             
             ComponentGenerator componentGenerator = new ComponentGenerator(typeDatabase,
                 sourceDir,
-                publicPathSuffix,
-                privatePathSuffix,
+                namespacePathSuffix,
                 generatedPathSuffix,
                 outPublicPath,
                 outPrivatePath,
-                outEditorPath,
+                editorBinaryPublicPath,
+                editorBinaryPrivatePath,
+                config.TargetConfig.HasEditorTarget,
                 includeDirectories,
                 moduleNamespaceStack);
-            
+
+            List<string> generatedComponentFiles = [];
+            List<string> generatedComponentEditorFiles = [];
+
             foreach (var componentDefinition in componentDefinitions)
             {
-                componentGenerator.Generate(componentDefinition);
+                componentGenerator.Generate(componentDefinition, generatedComponentFiles, generatedComponentEditorFiles);
+
+                typeDatabase.AddType(generatedComponentEditorFiles.Where(file => file.EndsWith(".h")), includeDirectories);
             }
-            
+
             string sourcesBasePath = PathExtension.GetShortestRelativePath(includeDirectories, sources.First());
-            ModuleGenerator generator = new ModuleGenerator(targetName, sourceDir, moduleNamespaceStack, typeDatabase);
+            ModuleGenerator generator = new ModuleGenerator(targetName, sourceDir, binaryDir, moduleNamespaceStack, typeDatabase);
             IEnumerable<string> generatedFiles = generator.GenerateModule(outPublicPath, outPrivatePath);
-            
+
             IEnumerable<string> filesToDelete = oldGeneratedFiles.Except(generatedFiles);
             foreach (var file in filesToDelete)
             {

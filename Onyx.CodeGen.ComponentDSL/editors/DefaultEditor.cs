@@ -9,9 +9,9 @@ namespace Onyx.CodeGen.ComponentDSL
 {
     internal class DefaultEditor : IFieldEditor
     {
-        public void Generate(CodeGenerator codeGenerator, Field field)
+        public void Generate(CodeGenerator codeGenerator, string fieldName, Field field)
         {
-            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name});");
+            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName});");
         }  
     }
 }

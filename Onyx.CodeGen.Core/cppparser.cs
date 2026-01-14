@@ -172,7 +172,6 @@ namespace Onyx.CodeGen.Core
                             templateArguments = GetTemplateParameters(typeChild);
                         }
                     }
-                    
                 }
             }
 
@@ -208,6 +207,7 @@ namespace Onyx.CodeGen.Core
             bool isQualifiedName = false;
             List<string> baseClasses = new List<string>();
             List<Function> functions = new List<Function>();
+            IEnumerable<string> templateArguments = Enumerable.Empty<string>();
 
             foreach (var child in cursor.children())
             {
@@ -226,6 +226,14 @@ namespace Onyx.CodeGen.Core
                     // look for constructor / create functions
                     ExtractFunctionDefinitions(cursor, currentNamespace, out functions);
                 }
+
+                
+                if (sym == "template_type")
+                {
+                    templateArguments = GetTemplateParameters(cursor);
+                }
+                       
+                
 
                 if (sym == "base_class_clause")
                 {
@@ -260,6 +268,7 @@ namespace Onyx.CodeGen.Core
                 outType.AbsolutePath = filePath;
                 outType.Inherits = baseClasses;
                 outType.HasTypeId = hasTypeId;
+                outType.SpecializedTemplateParameters = templateArguments.ToList();
 
                 if (functions.IsNullOrEmpty() == false)
                 {

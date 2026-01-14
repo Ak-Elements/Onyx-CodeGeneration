@@ -1,116 +1,130 @@
 ﻿using Onyx.CodeGen.Core;
-using System;
-using System.ComponentModel;
-using System.Reflection;
-using System.Reflection.Emit;
-using static Onyx.CodeGen.Core.CodeGenerator;
 
 namespace Onyx.CodeGen.ComponentDSL
 {
     public class ComponentGenerator
     {
         private string moduleSourcePath;
-        private string publicPathSuffix;
-        private string privatePathSuffix;
+        private string namespacePathSuffix;
         private string generatedPathSuffix;
         private string outPublicPath;
         private string outPrivatePath;
-        private string outEditorPath;
+        private string outEditorPublicPath;
+        private string outEditorPrivatePath;
         private IEnumerable<string> includeDirectories;
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
 
-
+        bool hasEditorTarget;
 
         public ComponentGenerator(TypeDatabase typeDatabase,
             string moduleSourcePath,
-            string publicPathSuffix,
-            string privatePathSuffix,
+            string namespacePathSuffix,
             string generatedPathSuffix,
             string outPublicPath,
             string outPrivatePath,
-            string outEditorPath,
+            string outEditorPublicPath,
+            string outEditorPrivatePath,
+            bool hasEditorTarget,
             IEnumerable<string> includeDirectories,
-            IEnumerable<string> moduleNamespaceStack)
+            IEnumerable<string> moduleNamespaceStack
+            )
         {
+            this.typeDatabase = typeDatabase;
             this.moduleSourcePath = moduleSourcePath;
-            this.publicPathSuffix = publicPathSuffix;
-            this.privatePathSuffix = privatePathSuffix;
+            this.namespacePathSuffix = namespacePathSuffix;
             this.generatedPathSuffix = generatedPathSuffix;
+
             this.outPublicPath = outPublicPath;
             this.outPrivatePath = outPrivatePath;
-            this.outEditorPath = outEditorPath;
+            this.outEditorPublicPath = outEditorPublicPath;
+            this.outEditorPrivatePath = outEditorPrivatePath;
+            
             this.includeDirectories = includeDirectories;
             this.moduleNamespaceStack = moduleNamespaceStack;
-            this.typeDatabase = typeDatabase;
+
+            this.hasEditorTarget = hasEditorTarget;
         }
 
-        public void Generate(string componentDefinitionPath)
-        {
+        public void Generate(string componentDefinitionPath, List<string> outGeneratedFiles, List<string> outGeneratedEditorFiles)
+        { 
             List<Component> components = Parse(componentDefinitionPath);
 
             // Generate
-            var publicSourcesPath = Path.Join(moduleSourcePath, publicPathSuffix);
             var outFileName = Path.GetFileNameWithoutExtension(componentDefinitionPath);
-            var relativePath = Path.GetDirectoryName(Path.GetRelativePath(publicSourcesPath, componentDefinitionPath));
-           
-            var headerPath = Path.Join(outPublicPath, relativePath, $"{outFileName}.gen.h").Replace('\\', '/');
-            GenerateComponentHeader(components, headerPath);
+            string relativePath = Path.GetDirectoryName(PathExtension.GetShortestRelativePath(includeDirectories, componentDefinitionPath)) ?? "";
+            relativePath = relativePath.Replace('\\', '/');
+            if (relativePath.StartsWith(namespacePathSuffix))
+            {
+                relativePath = relativePath.Substring(namespacePathSuffix.Length);
+            }
 
-            string headerIncludePath = PathExtension.GetShortestRelativePath(includeDirectories, headerPath);
+            var headerPath = Path.Join(outPublicPath, relativePath, $"{outFileName}.gen.h").Replace('\\', '/');
             var cppPath = Path.Join(outPrivatePath, relativePath, $"{outFileName}.gen.cpp").Replace('\\', '/');
 
-            List<string> componentIncludes;
-            List<string> editorIncludes;
-            IEnumerable<string> editorCppCodeLines = GenerateComponentEditorCpp(components, headerIncludePath, out editorIncludes);
-            IEnumerable<string> componentCppCodeLines = GenerateComponentCpp(components, headerIncludePath, out componentIncludes);
-            if (string.IsNullOrWhiteSpace(outEditorPath))
+            string componentHeaderIncludePath = PathExtension.GetShortestRelativePath(includeDirectories, headerPath);
+
+            List<string> componentHeaderIncludes = [];
+            List<string> componentCppIncludes = [];
+
+            List<string> editorHeaderIncludes = [];
+            List<string> editorCppIncludes = [];
+
+            IEnumerable<string> headerCodeLines = GenerateComponentHeader(components, componentHeaderIncludes);
+            IEnumerable<string> componentCppCodeLines = GenerateComponentCpp(components, componentHeaderIncludePath, out componentCppIncludes);
+
+            IEnumerable<string> editorHeaderCodeLines = GenerateComponentInspectorHeader(components, editorHeaderIncludes);
+            IEnumerable<string> editorCppCodeLines = GenerateComponentInspectorCpp(components, editorCppIncludes);
+
+            CodeGenerator headerGenerator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER);
+            CodeGenerator cppGenerator = new CodeGenerator();
+
+            CodeGenerator editorHeaderGenerator = hasEditorTarget ? new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER) : headerGenerator;
+            CodeGenerator editorCppGenerator = hasEditorTarget ? new CodeGenerator() : cppGenerator;
+
+            headerGenerator.AddIncludes(componentHeaderIncludes);
+            headerGenerator.Append(headerCodeLines);
+
+            cppGenerator.AddIncludes(componentCppIncludes);
+            cppGenerator.Append(componentCppCodeLines);
+
+            editorHeaderGenerator.AddIncludes(editorHeaderIncludes);
+            editorHeaderGenerator.Append(editorHeaderCodeLines);
+
+            editorCppGenerator.AddIncludes(editorCppIncludes);
+            editorCppGenerator.Append(editorCppCodeLines);
+
+            outGeneratedFiles.Add(headerPath);
+            outGeneratedFiles.Add(cppPath);
+            File.WriteAllText(headerPath, headerGenerator.GetCode());
+            File.WriteAllText(cppPath, cppGenerator.GetCode());
+
+            if (hasEditorTarget)
             {
-                CodeGenerator codeGenerator = new CodeGenerator();
+                var editorHeaderFileName = $"{outFileName}inspector.gen.h";
+                var editorCppPath = Path.Join(outEditorPrivatePath, relativePath, $"{outFileName}inspector.gen.cpp");
+                var editorHeaderPath = Path.Join(outEditorPublicPath, relativePath, editorHeaderFileName);
 
-                codeGenerator.AddIncludes(componentIncludes);
-                codeGenerator.AddIncludes(editorIncludes);
-                codeGenerator.AppendLine();
+                var editorHeaderIncludePath = Path.Join(namespacePathSuffix, relativePath, editorHeaderFileName).Replace('\\', '/');
 
-                codeGenerator.Append(editorCppCodeLines);
-                codeGenerator.AppendLine();
+                editorHeaderGenerator.AddInclude(componentHeaderIncludePath);
+                editorCppGenerator.AddInclude(editorHeaderIncludePath);
 
-                codeGenerator.Append(componentCppCodeLines);
-                codeGenerator.AppendLine();
-
-                File.WriteAllText(cppPath, codeGenerator.GetCode());
-            }
-            else
-            {
-                {
-                    CodeGenerator codeGenerator = new CodeGenerator();
-                    codeGenerator.AddInclude(headerIncludePath);
-                    codeGenerator.AddIncludes(componentIncludes);
-                    codeGenerator.AppendLine();
-                    codeGenerator.Append(componentCppCodeLines);
-                    File.WriteAllText(cppPath, codeGenerator.GetCode());
-                }
-
-                {
-                    var editorCppPath = Path.Join(outEditorPath, generatedPathSuffix, privatePathSuffix, relativePath, $"{outFileName}_editor.gen.cpp");
-                    CodeGenerator codeGenerator = new CodeGenerator();
-                    codeGenerator.AddIncludes(editorIncludes);
-                    codeGenerator.AppendLine();
-                    codeGenerator.Append(editorCppCodeLines);
-                    File.WriteAllText(editorCppPath, codeGenerator.GetCode());
-                }  
-            }
+                outGeneratedEditorFiles.Add(editorHeaderPath);
+                outGeneratedEditorFiles.Add(editorCppPath);
+                File.WriteAllText(editorHeaderPath, editorHeaderGenerator.GetCode());
+                File.WriteAllText(editorCppPath, editorCppGenerator.GetCode()); 
+            }           
         }
 
-        private void GenerateComponentHeader(IReadOnlyList<Component> components, string outPath)
+        private IEnumerable<string> GenerateComponentHeader(IReadOnlyList<Component> components, List<string> outIncludes)
         {
-            CodeGenerator codeGenerator = new CodeGenerator();
-            codeGenerator.Append("#pragma once");
-            
+            CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
+
             var currentNamespace = string.Join("::", moduleNamespaceStack);
             foreach (var component in components)
             {
-                GenerateComponentDeclaration(codeGenerator, currentNamespace, component);
+                GenerateComponentDeclaration(codeGenerator, currentNamespace, component, outIncludes);
             }
 
             var nonTransientComponents = components.Where(component => component.IsRuntimeOnly == false);
@@ -126,16 +140,16 @@ namespace Onyx.CodeGen.ComponentDSL
                 }
             }
 
-            File.WriteAllText(outPath, codeGenerator.GetCode());
+            return codeGenerator.GetCodeLines();
         }
 
-        private static void GenerateComponentDeclaration(CodeGenerator codeGenerator, string currentNamespace, Component component)
+        private static void GenerateComponentDeclaration(CodeGenerator codeGenerator, string currentNamespace, Component component, List<string> outIncludes)
         {
             var includes = component.Fields
               .Where(field => field.Type != null && field.Type.AbsolutePath.Contains("onyx/modules/core") == false)
               .Select(field => field.Type?.IncludePath ?? "");
 
-            codeGenerator.AddIncludes(includes);
+            outIncludes.AddRange(includes);
 
             if (includes.Any())
             {
@@ -190,15 +204,6 @@ namespace Onyx.CodeGen.ComponentDSL
                         }
                     }
                 }
-
-                bool hasEditorFields = component.Fields.Any(component => component.IsHidden == false);
-                if( hasEditorFields )
-                {
-                    codeGenerator.AppendLine();
-                    codeGenerator.Append("#if ONYX_IS_DEBUG || ONYX_IS_EDITOR", true);
-                    codeGenerator.Append("bool DrawProperties(bool forceShow);");
-                    codeGenerator.Append("#endif", true);
-                }
             }
         }
 
@@ -217,7 +222,8 @@ namespace Onyx.CodeGen.ComponentDSL
         {
             includePaths = new List<string>();
 
-            CodeGenerator codeGenerator = new CodeGenerator("");
+            CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
+            includePaths.Add(headerIncludePath);
 
             var serializableComponents = components.Where(component => component.IsRuntimeOnly == false);
             if (serializableComponents.Any())
@@ -294,19 +300,54 @@ namespace Onyx.CodeGen.ComponentDSL
             return codeGenerator.GetCodeLines();
         }
 
-        private IEnumerable<string> GenerateComponentEditorCpp(IReadOnlyList<Component> components, string headerIncludePath, out List<string> outEditorIncludes)
+        private IEnumerable<string> GenerateComponentInspectorHeader(IReadOnlyList<Component> components, List<string> outIncludes)
         {
-            outEditorIncludes =
-            [
-                headerIncludePath,
-                "onyx/ui/propertygrid.h",
-                "onyx/ui/scopeddisable.h", // Only if readonly
-            ];
+            CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
 
-            CodeGenerator codeGenerator = new CodeGenerator("");
-            var currentNamespace = string.Join("::", moduleNamespaceStack);
-            using( codeGenerator.EnterScope( $"namespace {currentNamespace}" ) )
+            outIncludes.Add("onyx/ui/propertyinspector.h");
+
+            IEnumerable<string> currentNamespace = ["Onyx", "Ui"];
+            using (codeGenerator.EnterScope("namespace Onyx::Ui"))
             {
+                bool appendNewLine = false;
+                foreach (var component in components)
+                {
+                    bool hasEditorFields = component.Fields.Any(component => component.IsHidden == false);
+                    if (hasEditorFields == false)
+                    {
+                        continue;
+                    }
+
+                    if (appendNewLine)
+                        codeGenerator.AppendLine();
+
+                    var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
+                    codeGenerator.Append("template <>");
+                    using (codeGenerator.EnterClass($"struct PropertyInspector<{componentTypeName}>"))
+                    {
+                        bool hasRuntimeOnlyFields = component.Fields.Any(field => field.IsRuntimeOnly && (field.IsHidden == false));
+                        var drawSignature = $"static bool Draw({componentTypeName}& component, bool{(hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/")});";
+
+                        codeGenerator.Append(drawSignature);
+                    }
+
+                    appendNewLine = true;
+
+                }
+            }
+
+            return codeGenerator.GetCodeLines();
+        }
+
+        private IEnumerable<string> GenerateComponentInspectorCpp(IReadOnlyList<Component> components, List<string> outEditorIncludes)
+        {
+            outEditorIncludes.Add("onyx/ui/propertygrid.h");
+
+            CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
+            IEnumerable<string> currentNamespace = [ "Onyx", "Ui"];
+            using( codeGenerator.EnterScope( $"namespace Onyx::Ui" ) )
+            {
+                bool appendNewLine = false;
                 foreach( var component in components )
                 {
                     bool hasEditorFields = component.Fields.Any( component => component.IsHidden == false );
@@ -315,14 +356,23 @@ namespace Onyx.CodeGen.ComponentDSL
                         continue;
                     }
 
+                    if (appendNewLine)
+                        codeGenerator.AppendLine();
+
+
                     //bool hasFields = component.Fields.Any(component => component.IsHidden);
-                    bool hasRuntimeOnlyFields = component.Fields.Any( component => component.IsRuntimeOnly && ( component.IsHidden == false ) );
+                    bool hasRuntimeOnlyFields = component.Fields.Any( field => field.IsRuntimeOnly && ( field.IsHidden == false ) );
+                    bool hasReadOnlyFields = component.Fields.Any(field => field.IsReadOnly);
+
+                    if (hasReadOnlyFields)
+                    {
+                        outEditorIncludes.Add("onyx/ui/scopeddisable.h");
+                    }
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
-                    var drawPropertiesSignature = $"bool { componentTypeName }::DrawProperties(bool{ ( hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/" ) })";
-                    using( codeGenerator.EnterFunction( drawPropertiesSignature ) )
+                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{ componentTypeName }>::Draw({componentTypeName}& component, bool{ ( hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/" ) })";
+                    using( codeGenerator.EnterFunction(componentInspectorSignature) )
                     {
-                        codeGenerator.Append("using namespace Ui;");
                         codeGenerator.Append("bool isModified = false;");
                         foreach( var field in component.Fields )
                         {
@@ -348,9 +398,10 @@ namespace Onyx.CodeGen.ComponentDSL
                             }
 
                             var fieldEditor = editor ?? new DefaultEditor();
+                            var fieldName = $"component.{field.Name}";
                             if (scopeName.IsNullOrEmpty() && (field.IsReadOnly == false))
                             {
-                                fieldEditor.Generate(codeGenerator, field);
+                                fieldEditor.Generate(codeGenerator, fieldName, field);
                             }
                             else
                             {
@@ -361,13 +412,15 @@ namespace Onyx.CodeGen.ComponentDSL
                                         codeGenerator.Append("ScopedImGuiDisabled _;");
                                     }
 
-                                    fieldEditor.Generate(codeGenerator, field);
+                                    fieldEditor.Generate(codeGenerator, fieldName, field);
                                 }
                             }
                         }
 
                         codeGenerator.Append("return isModified;");
                     }
+
+                    appendNewLine = true;
                 }
             }
 

@@ -20,7 +20,7 @@ namespace Onyx.CodeGen.ComponentDSL
     [Editor("Slider")]
     internal class SliderEditor : IFieldEditor
     {
-        public void Generate(CodeGenerator codeGenerator, Field field)
+        public void Generate(CodeGenerator codeGenerator, string fieldName, Field field)
         {
             object? min = null;
             object? max = null;
@@ -58,7 +58,7 @@ namespace Onyx.CodeGen.ComponentDSL
             }
 
             numericOptions.Add(".IsSlider = true");
-            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {field.Name}, {{ { string.Join(", " ,numericOptions) } }} );");
+            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ { string.Join(", " ,numericOptions) } }} );");
         }  
     }
 }
