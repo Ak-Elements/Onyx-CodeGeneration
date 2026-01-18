@@ -143,11 +143,9 @@ namespace Onyx.CodeGen.ComponentDSL
             return codeGenerator.GetCodeLines();
         }
 
-        private static void GenerateComponentDeclaration(CodeGenerator codeGenerator, string currentNamespace, Component component, List<string> outIncludes)
+        private void GenerateComponentDeclaration(CodeGenerator codeGenerator, string currentNamespace, Component component, List<string> outIncludes)
         {
-            var includes = component.Fields
-              .Where(field => field.Type != null && field.Type.AbsolutePath.Contains("onyx/modules/core") == false)
-              .Select(field => field.Type?.IncludePath ?? "");
+            var includes = component.Fields.SelectMany(field => field.GetIncludePaths());
 
             outIncludes.AddRange(includes);
 
@@ -181,26 +179,45 @@ namespace Onyx.CodeGen.ComponentDSL
                 codeGenerator.Append("StringId32 GetTypeId() const { return TypeId; }");
                 codeGenerator.AppendLine();
 
+                // TODO: Group fields based on their build type / editor only
+                //var debugBuildOnlyFields = component.Fields.Where(field => field.BuildType == Build.Debug);
+                //var releaseBuildOnlyFields = component.Fields.Where(field => field.BuildType == Build.Release);
+                //var retailBuildOnlyFields = component.Fields.Where(field => field.BuildType == Build.Retail);
+                //
+                //var editorOnlyField = component.Fields.Where(field => field.HasAttribute<EditorOnlyAttribute>());
+                //
+                //var allBuildTypeFields = component.Fields
+                //    .Except(debugBuildOnlyFields)
+                //    .Except(releaseBuildOnlyFields)
+                //    .Except(retailBuildOnlyFields)
+                //    .Except(editorOnlyField);
+
                 foreach (Field field in component.Fields)
                 {
-                    if (field.Attributes.Any())
-                    {
-                        codeGenerator.Append($"//[{string.Join(", ", field.Attributes)}]");
-                    }
+                    var editorPreprocessor = field.IsEditorOnly ? "ONYX_IS_EDITOR" : string.Empty;
 
-                    if (string.IsNullOrEmpty(field.DefaultValue))
+                    using (codeGenerator.EnterPreprocessorScope(editorPreprocessor))
                     {
-                        codeGenerator.Append($"{field.TypeName} {field.Name};");
-                    }
-                    else
-                    {
-                        if (field.TypeName.Equals("string", StringComparison.OrdinalIgnoreCase))
+                        if (field.Attributes.Any())
                         {
-                            codeGenerator.Append($"{field.TypeName} {field.Name} {{ \"{field.DefaultValue}\" }};");
+                            codeGenerator.Append($"//[{string.Join(", ", field.Attributes)}]");
+                        }
+
+                        var fieldTypeName = field.GetTrimmedTypeName(typeDatabase, moduleNamespaceStack);
+                        if (string.IsNullOrEmpty(field.DefaultValue))
+                        {
+                            codeGenerator.Append($"{fieldTypeName} {field.Name};");
                         }
                         else
                         {
-                            codeGenerator.Append($"{field.TypeName} {field.Name} {{ {field.DefaultValue} }};");
+                            if (fieldTypeName.Equals("string", StringComparison.OrdinalIgnoreCase))
+                            {
+                                codeGenerator.Append($"{fieldTypeName} {field.Name} {{ \"{field.DefaultValue}\" }};");
+                            }
+                            else
+                            {
+                                codeGenerator.Append($"{fieldTypeName} {field.Name} {{ {field.DefaultValue} }};");
+                            }
                         }
                     }
                 }
@@ -237,7 +254,7 @@ namespace Onyx.CodeGen.ComponentDSL
                     {
                         var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("Onyx");
                         var serializerComponentParameterName = char.ToLower(component.Name[0]) + component.Name[1..];
-                        using (codeGenerator.EnterFunction($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
+                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
                         {
                             var serializerCalls = component.Fields
                                 .Where(field => field.IsRuntimeOnly == false)
@@ -256,7 +273,7 @@ namespace Onyx.CodeGen.ComponentDSL
                             {
                                 codeGenerator.Append($"return {serializerCalls.First()} ||");
 
-                                using (codeGenerator.EnterScopeNoBraces())
+                                using (codeGenerator.Indent())
                                 {
                                     codeGenerator.Append(serializerCalls.Skip(1).SkipLast(1).Select(serializerCall => $"{serializerCall} ||"));
                                     codeGenerator.Append($"{serializerCalls.Last()};");
@@ -267,7 +284,7 @@ namespace Onyx.CodeGen.ComponentDSL
                         
                         codeGenerator.AppendLine();
 
-                        using (codeGenerator.EnterFunction($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
+                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
                         {
                             var deserializerCalls = component.Fields
                                 .Where(field => field.IsRuntimeOnly == false)
@@ -286,7 +303,7 @@ namespace Onyx.CodeGen.ComponentDSL
                             {
                                 codeGenerator.Append($"return {deserializerCalls.First()} ||");
 
-                                using (codeGenerator.EnterScopeNoBraces())
+                                using (codeGenerator.Indent())
                                 {
                                     codeGenerator.Append(deserializerCalls.Skip(1).SkipLast(1).Select(deserializerCall => $"{deserializerCall} ||"));
                                     codeGenerator.Append($"{deserializerCalls.Last()};");
@@ -371,7 +388,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
                     var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{ componentTypeName }>::Draw({componentTypeName}& component, bool{ ( hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/" ) })";
-                    using( codeGenerator.EnterFunction(componentInspectorSignature) )
+                    using( codeGenerator.EnterScope(componentInspectorSignature) )
                     {
                         codeGenerator.Append("bool isModified = false;");
                         foreach( var field in component.Fields )
@@ -552,19 +569,32 @@ namespace Onyx.CodeGen.ComponentDSL
                 }
 
                 var typeName = parts[0];
-                Core.Type? type = typeDatabase.ResolveTypeName(typeName, currentNamespace);
+                Core.Type? type = typeDatabase.ResolveTypeName(typeName, moduleNamespaceStack);
+                List<Core.Type> specializedTemplateTypes = [];
+                if (type is TemplateType)
+                {
+                    specializedTemplateTypes = typeDatabase.ResolveSpecializedTemplateTypes(typeName, moduleNamespaceStack);
+                }
 
                 string defaultValue = string.Empty;
                 bool hasDefaultValue = trimmed.Any(c => c == '=' || c == '{');
                 if (hasDefaultValue)
                 {
-                    defaultValue = string.Join(", ", parts[2..].Select(value => value + GetFormatLiteral( type, value ) ) );
+                    defaultValue = string.Join(", ", parts[2..].Select(value => {
+                        var literal = GetFormatLiteral( type );
+                        
+                        if (value.EndsWith(literal))
+                            return value;
+
+                        return value + literal;
+                    }));
                 }
 
                 Field field = new Field
                 {
-                    FallbackTypeName = parts[0],
+                    OcdTypeName = parts[0],
                     Type = type,
+                    SpecializedTemplateTypes = specializedTemplateTypes,
                     Attributes = new List<Attribute>(attributes),
                     Name = parts[1],
                     DefaultValue = defaultValue
@@ -577,12 +607,9 @@ namespace Onyx.CodeGen.ComponentDSL
             return components;
         }
 
-        private string GetFormatLiteral(Core.Type? type, string valueLiteral)
+        private string GetFormatLiteral(Core.Type? type)
         {
-            if (type == null)
-                return valueLiteral;
-
-            if ( DSLTypes.TYPE_TO_LITERAL_SUFFIX.TryGetValue(type.Name, out string? literalSuffix) )
+            if (type != null && DSLTypes.TYPE_TO_LITERAL_SUFFIX.TryGetValue(type.Name, out string? literalSuffix) )
                 return literalSuffix;
 
             return "";

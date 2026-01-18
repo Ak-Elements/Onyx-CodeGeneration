@@ -120,7 +120,7 @@ namespace Onyx.CodeGen.CLI
             codeGenerator.AppendLine();
             
             using (codeGenerator.EnterScope("namespace Onyx"))
-            using (codeGenerator.EnterFunction("void Init()"))
+            using (codeGenerator.EnterScope("void Init()"))
             {
                 var registerEngineModuleFunctions = allGlobalFunctions.Where(function => function.Name == "Init");
                 foreach (var function in registerEngineModuleFunctions)

@@ -43,12 +43,14 @@ namespace Onyx.CodeGen.ComponentDSL
                     {
                         if (field.Type == null)
                         {
-                            return type == field.TypeName;
+                            return type == field.OcdTypeName;
                         }
                         else
                         {
                             Type cppType = field.Type;
-                            return (type == cppType.Name) || (type == cppType.FullyQualifiedName) || (cppType.IsAliased && cppType.AliasedType == type);
+                            return (type == cppType.Name) ||
+                                (type == cppType.FullyQualifiedName) ||
+                                (cppType.IsAliased && cppType.AliasedType == type);
                         }
                         
                     });

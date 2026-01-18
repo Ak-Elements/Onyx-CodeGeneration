@@ -100,8 +100,6 @@ namespace Onyx.CodeGen.Module
 
             var headerFile = GenerateModuleHeader(outputPublicPath);
 
-            //var overrideInspectorFunctor = 
-
             List<RegisterCreateData> register = new List<RegisterCreateData>()
             {
                 new ()
@@ -257,7 +255,7 @@ namespace Onyx.CodeGen.Module
                 if (appendLine)
                     generator.AppendLine();
 
-                using (generator.EnterFunction("void Init()"))
+                using (generator.EnterScope("void Init()"))
                 {
                     generator.Append(generatedFunctionCalls.Select(functionCall => $"{functionCall}();"));
                 }

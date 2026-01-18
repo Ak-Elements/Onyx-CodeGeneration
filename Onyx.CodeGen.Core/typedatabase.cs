@@ -247,7 +247,45 @@ namespace Onyx.CodeGen.Core
             }
 
             // try to get closest match to typename even if namespace did not match
-            return types.SingleOrDefault(type => type.Value.Name.Equals(typeName)).Value;
+            type = types.SingleOrDefault(type => type.Value.Name.Equals(typeName)).Value;
+
+            if (type == null)
+            {
+                var templateStartIndex = typeName.IndexOf('<');
+                if (templateStartIndex != -1)
+                {
+                    return ResolveTypeName(typeName[..templateStartIndex], namespaceContext);
+                }
+
+            }
+            return type;
+        }
+
+        // Move to type database
+        public List<Type> ResolveSpecializedTemplateTypes(string typeName, IEnumerable<string> namespaceContext)
+        {
+            List<Type> templateTypes = [];
+  
+            var templateStartIndex = typeName.IndexOf('<') + 1;
+            if (templateStartIndex == 0)
+            {
+                return templateTypes; 
+            }
+
+            var templateEndIndex = typeName.LastIndexOf('>');
+
+            var paramList = typeName[templateStartIndex..templateEndIndex];
+            var templateTypeNames = paramList.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+            foreach (var templateTypeName in templateTypeNames)
+            {
+                if (ResolveTypeName(templateTypeName, namespaceContext) is Core.Type templateParamType)
+                {
+                    templateTypes.Add(templateParamType);
+                }
+            }
+
+            return templateTypes;
         }
 
         public void AddType(IEnumerable<string> typeHeaders, IEnumerable<string> includeDirectories)

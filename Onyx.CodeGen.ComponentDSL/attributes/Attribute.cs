@@ -62,6 +62,7 @@
         Debug = 1 << 0,
         Release = 1 << 1,
         Retail = 1 << 2,
+        All = 0xFF,
     }
 
     internal class BuildAttribute : Attribute
@@ -76,6 +77,18 @@
         public override string ToString()
         {
             return $"Build( { Type.ToString() } )";
+        }
+
+        public string GetBuildTypeDefine()
+        {
+            switch (Type)
+            {
+                case Build.Debug: return "ONYX_IS_DEBUG";
+                case Build.Release: return "ONYX_IS_RELEASE";
+                case Build.Retail: return "ONYX_IS_RETAIL";
+            }
+
+            return "";
         }
     }
 
