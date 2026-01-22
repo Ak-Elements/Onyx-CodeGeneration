@@ -19,6 +19,7 @@ namespace Onyx.CodeGen.Core
             outGlobalFunctions = new List<Function>();
             filePath = path;
             source = File.ReadAllText(path);
+
             using (var parser = new TSParser())
             {
                 var treesitter_cpp = TsCpp.tree_sitter_cpp();
@@ -98,12 +99,21 @@ namespace Onyx.CodeGen.Core
                             {
                                 case "class_specifier":
                                 case "struct_specifier":
+                                {
                                     var newType = templateType as Type;
                                     if (ExtractType(cursor, child.current_symbol() == "class_specifier" ? "template class" : "template struct", ref newType, localNamespaceStack))
                                     {
                                         outTypes.Add(newType);
                                     }
                                     break;
+                                }
+                                case "alias_declaration":
+                                {
+                                    Type newType;
+                                    ExtractAlias(cursor, out newType, localNamespaceStack);    
+                                    outTypes.Add(newType);
+                                    break;
+                                }
                             }
                         }
                         return;
@@ -164,11 +174,13 @@ namespace Onyx.CodeGen.Core
                                 if (typeIdentifierChild.current_symbol() == "template_type")
                                 {
                                     templateArguments = GetTemplateParameters(typeIdentifierChild);
+                                    isTemplate = true;
                                 }
                             }
                         }
                         else if (typeSymbol == "template_type")
                         {
+                            // Specialized template parameters
                             templateArguments = GetTemplateParameters(typeChild);
                         }
                     }
@@ -406,8 +418,9 @@ namespace Onyx.CodeGen.Core
             var parameters = new List<string>();
             foreach (var child in cursor.children())
             {
-                if ((cursor.current_symbol() == "template_parameter_list") ||
-                    (cursor.current_symbol() == "template_argument_list"))
+                var sym = child.current_symbol();
+                if ((sym == "template_parameter_list") ||
+                    (sym == "template_argument_list"))
                 {
                     foreach (var paramChild in child.children())
                     {
