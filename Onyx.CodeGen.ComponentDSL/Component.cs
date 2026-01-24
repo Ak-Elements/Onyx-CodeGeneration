@@ -11,10 +11,10 @@
         internal List<Attribute> Attributes { get; set; } = [];
         internal List<Field> Fields { get; set; } = [];
 
-        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
-        //internal bool IsTransient => HasAttribute<TransientAttribute>();
+        internal bool IsTransient => HasAttribute<TransientAttribute>();
         internal bool IsReadOnly => HasAttribute<ReadOnlyAttribute>();
         internal bool IsHidden => HasAttribute<HiddenAttribute>();
+        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
         internal bool IsEditorOnly => HasAttribute<EditorOnlyAttribute>();
 
         //internal bool IsSerializable => (IsRuntimeOnly == false) && (IsTransient == false);

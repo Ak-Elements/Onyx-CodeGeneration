@@ -73,8 +73,9 @@ namespace Onyx.CodeGen.ComponentDSL
             IEnumerable<string> headerCodeLines = GenerateComponentHeader(components, componentHeaderIncludes);
             IEnumerable<string> componentCppCodeLines = GenerateComponentCpp(components, componentHeaderIncludePath, out componentCppIncludes);
 
-            IEnumerable<string> editorHeaderCodeLines = GenerateComponentInspectorHeader(components, editorHeaderIncludes);
-            IEnumerable<string> editorCppCodeLines = GenerateComponentInspectorCpp(components, editorCppIncludes);
+            bool hasEditorComponents = components.Any( component => component.IsHidden == false );
+            IEnumerable<string> editorHeaderCodeLines = hasEditorComponents ? GenerateComponentInspectorHeader(components, editorHeaderIncludes) : Enumerable.Empty<string>();
+            IEnumerable<string> editorCppCodeLines = hasEditorComponents ? GenerateComponentInspectorCpp(components, editorCppIncludes) : Enumerable.Empty<string>();
 
             CodeGenerator headerGenerator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER);
             CodeGenerator cppGenerator = new CodeGenerator();
@@ -127,7 +128,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 GenerateComponentDeclaration(codeGenerator, currentNamespace, component, outIncludes);
             }
 
-            var nonTransientComponents = components.Where(component => component.IsRuntimeOnly == false);
+            var nonTransientComponents = components.Where(component => component.IsTransient == false);
             if (nonTransientComponents.Any())
             {
                 codeGenerator.AppendLine();
@@ -158,19 +159,19 @@ namespace Onyx.CodeGen.ComponentDSL
             using (codeGenerator.EnterClass($"struct {component.Name}"))
             {
                 bool isRuntimeOnly = component.IsRuntimeOnly;
-                bool isHidden = component.IsHidden;
+                bool isTransient = component.IsTransient;
 
-                if (isHidden)
-                {
-                    codeGenerator.Append("static constexpr bool HideInEditor = true;");
-                }
-
-                if (isRuntimeOnly)
+                if (isTransient)
                 {
                     codeGenerator.Append("static constexpr bool IsTransient = true;");
                 }
 
-                if (isRuntimeOnly || isHidden)
+                if (isRuntimeOnly)
+                {
+                    codeGenerator.Append("static constexpr bool IsRuntimeOnly = true;");
+                }
+
+                if (isRuntimeOnly || isTransient)
                 {
                     codeGenerator.AppendLine();
                 }
@@ -242,7 +243,7 @@ namespace Onyx.CodeGen.ComponentDSL
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
             includePaths.Add(headerIncludePath);
 
-            var serializableComponents = components.Where(component => component.IsRuntimeOnly == false);
+            var serializableComponents = components.Where(component => component.IsTransient == false);
             if (serializableComponents.Any())
             {
                 includePaths.Add("onyx/serialize/serializer.h");
@@ -257,7 +258,7 @@ namespace Onyx.CodeGen.ComponentDSL
                         using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
                         {
                             var serializerCalls = component.Fields
-                                .Where(field => field.IsRuntimeOnly == false)
+                                .Where(field => field.IsTransient == false)
                                 .Select(field => $"serializer.Write<\"{field.Name}\">({serializerComponentParameterName}.{field.Name})");
 
                             var serializerWritesCount = serializerCalls.Count();
@@ -287,7 +288,7 @@ namespace Onyx.CodeGen.ComponentDSL
                         using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
                         {
                             var deserializerCalls = component.Fields
-                                .Where(field => field.IsRuntimeOnly == false)
+                                .Where(field => field.IsTransient == false)
                                 .Select(field => $"deserializer.Read<\"{field.Name}\">(out{component.Name}.{field.Name})");
 
                             var serializerReadsCount = deserializerCalls.Count();
@@ -342,8 +343,8 @@ namespace Onyx.CodeGen.ComponentDSL
                     codeGenerator.Append("template <>");
                     using (codeGenerator.EnterClass($"struct PropertyInspector<{componentTypeName}>"))
                     {
-                        bool hasRuntimeOnlyFields = component.Fields.Any(field => field.IsRuntimeOnly && (field.IsHidden == false));
-                        var drawSignature = $"static bool Draw({componentTypeName}& component, bool{(hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/")});";
+                        //TODO: Add Visibility flag for attributes / components
+                        var drawSignature = $"static bool Draw({componentTypeName}& component, bool /*forceShow*/);";
 
                         codeGenerator.Append(drawSignature);
                     }
@@ -377,17 +378,14 @@ namespace Onyx.CodeGen.ComponentDSL
                         codeGenerator.AppendLine();
 
 
-                    //bool hasFields = component.Fields.Any(component => component.IsHidden);
-                    bool hasRuntimeOnlyFields = component.Fields.Any( field => field.IsRuntimeOnly && ( field.IsHidden == false ) );
                     bool hasReadOnlyFields = component.Fields.Any(field => field.IsReadOnly);
-
                     if (hasReadOnlyFields)
                     {
                         outEditorIncludes.Add("onyx/ui/scopeddisable.h");
                     }
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
-                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{ componentTypeName }>::Draw({componentTypeName}& component, bool{ ( hasRuntimeOnlyFields ? " forceShow" : " /*forceShow*/" ) })";
+                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{ componentTypeName }>::Draw({componentTypeName}& component, bool /*forceShow*/)";
                     using( codeGenerator.EnterScope(componentInspectorSignature) )
                     {
                         codeGenerator.Append("bool isModified = false;");
@@ -401,11 +399,11 @@ namespace Onyx.CodeGen.ComponentDSL
                                 codeGenerator.Append($"PropertyGrid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
                             }
 
-                            // Hidden should be overridable by the editor
-                            var scopeName = field.IsRuntimeOnly ? "if (forceShow)" : "";
+                            // TODO: Add visibility check here
+                            var scopeName = "";
 
                             IFieldEditor? editor = null;
-                            if (field.GetAttribute<Editor>() is Editor customEditorAttribute)
+                            if (field.GetAttribute<EditorAttribute>() is EditorAttribute customEditorAttribute)
                             {
                                 editor = Editors.GetEditor(customEditorAttribute.Value);
                             }

@@ -12,9 +12,10 @@ namespace Onyx.CodeGen.ComponentDSL
         internal string DefaultValue { get; set; }
         internal List<Attribute> Attributes { get; set; }
 
-        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
+        internal bool IsTransient => HasAttribute<TransientAttribute>();
         internal bool IsReadOnly => HasAttribute<ReadOnlyAttribute>();
         internal bool IsHidden => HasAttribute<HiddenAttribute>();
+        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
         internal bool IsEditorOnly => HasAttribute<EditorOnlyAttribute>();
 
         internal string DisplayName => GetAttribute<NameAttribute>()?.Value ?? Name;

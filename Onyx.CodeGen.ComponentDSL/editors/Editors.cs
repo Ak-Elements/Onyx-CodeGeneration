@@ -15,11 +15,13 @@ namespace Onyx.CodeGen.ComponentDSL
             .Where(p => !p.IsGenericType)
             .Where(p => typeof(IFieldEditor).IsAssignableFrom(p));
 
+        private static readonly IEnumerable<System.Type> DEFAULT_FIELD_EDITORS = FIELD_EDITORS.Where(editor => editor.GetCustomAttribute<EditorAttribute>() == null);
+
         internal static IFieldEditor? GetEditor(string editorName)
         {
             var editorType = FIELD_EDITORS.Where(editorType =>
             {
-                var editorAttribute = editorType.GetCustomAttribute<Editor>(inherit: true);
+                var editorAttribute = editorType.GetCustomAttribute<EditorAttribute>(inherit: true);
                 string editorName = editorAttribute?.Value ?? editorType.Name;
                 return editorName.Equals(editorName, StringComparison.OrdinalIgnoreCase);
 
@@ -35,7 +37,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
         internal static IFieldEditor? GetEditor(Field field)
         {
-            var editorType = FIELD_EDITORS.Where(editorType =>
+            var editorType = DEFAULT_FIELD_EDITORS.Where(editorType =>
             {
                 if (editorType.GetCustomAttribute<AllowedTypesAttribute>(inherit: true) is AllowedTypesAttribute allowedTypes)
                 {
