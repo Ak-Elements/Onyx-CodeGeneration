@@ -20,7 +20,7 @@
     </Content>
   </ItemGroup>
 
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+  <Target Name="PostBuild" BeforeTargets="PostBuildEvent">
     <Exec Command="cmake -S ./external/ -B ./external/out" />
     <Exec Command="cmake --build ./external/out --config Release" />
   </Target>
