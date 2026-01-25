@@ -6,7 +6,7 @@ namespace Onyx.CodeGen.Core
     {
         private class CodeScope : IDisposable
         {
-            private Action OnDispose;
+            private Action? OnDispose;
 
             public CodeScope()
             {

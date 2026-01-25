@@ -128,7 +128,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 GenerateComponentDeclaration(codeGenerator, currentNamespace, component, outIncludes);
             }
 
-            var nonTransientComponents = components.Where(component => component.IsTransient == false);
+            var nonTransientComponents = components.Where(component => ( component.IsTransient == false ) && component.Fields.Any( f => f.IsTransient == false ) );
             if (nonTransientComponents.Any())
             {
                 codeGenerator.AppendLine();
@@ -243,7 +243,7 @@ namespace Onyx.CodeGen.ComponentDSL
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
             includePaths.Add(headerIncludePath);
 
-            var serializableComponents = components.Where(component => component.IsTransient == false);
+            var serializableComponents = components.Where(component => (component.IsTransient == false) && component.Fields.Any(f => f.IsTransient == false));
             if (serializableComponents.Any())
             {
                 includePaths.Add("onyx/serialize/serializer.h");
