@@ -5,24 +5,26 @@
     <Nullable>enable</Nullable>
     <IsTrimmable>True</IsTrimmable>
   </PropertyGroup>
-  
-  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
-    <Content Include="external/out/Release/*.dll" Visible="false">
-      <Link>%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
 
-  <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
-    <Content Include="external/out/*.so" Visible="false">
-      <Link>%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
-  <Target Name="PostBuild" BeforeTargets="PostBuildEvent">
+  <Target Name="BuildExternal" BeforeTargets="Build">
+    <!-- Build native dependencies -->
     <Exec Command="cmake -S ./external/ -B ./external/out" />
     <Exec Command="cmake --build ./external/out --config Release" />
+    
+    <!-- Pick up files AFTER they exist -->
+    <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+      <NativeLibs Include="external/out/Release/*.dll" />
+    </ItemGroup>
+    
+    <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
+      <NativeLibs Include="external/out/*.so" />
+    </ItemGroup>
+    
+    <!-- Copy to output -->
+    <Copy
+      SourceFiles="@(NativeLibs)"
+      DestinationFolder="$(OutDir)"
+      SkipUnchangedFiles="true" />
   </Target>
 
 </Project>
