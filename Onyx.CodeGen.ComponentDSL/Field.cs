@@ -15,7 +15,6 @@ namespace Onyx.CodeGen.ComponentDSL
         internal bool IsTransient => HasAttribute<TransientAttribute>();
         internal bool IsReadOnly => HasAttribute<ReadOnlyAttribute>();
         internal bool IsHidden => HasAttribute<HiddenAttribute>();
-        internal bool IsRuntimeOnly => HasAttribute<RuntimeOnlyAttribute>();
         internal bool IsEditorOnly => HasAttribute<EditorOnlyAttribute>();
 
         internal string DisplayName => GetAttribute<NameAttribute>()?.Value ?? Name;

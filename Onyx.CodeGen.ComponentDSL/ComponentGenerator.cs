@@ -73,7 +73,7 @@ namespace Onyx.CodeGen.ComponentDSL
             IEnumerable<string> headerCodeLines = GenerateComponentHeader(components, componentHeaderIncludes);
             IEnumerable<string> componentCppCodeLines = GenerateComponentCpp(components, componentHeaderIncludePath, out componentCppIncludes);
 
-            bool hasEditorComponents = components.Any( component => component.IsHidden == false );
+            bool hasEditorComponents = components.Any( component => component.IsHidden == false && component.IsCodeOnly == false );
             IEnumerable<string> editorHeaderCodeLines = hasEditorComponents ? GenerateComponentInspectorHeader(components, editorHeaderIncludes) : Enumerable.Empty<string>();
             IEnumerable<string> editorCppCodeLines = hasEditorComponents ? GenerateComponentInspectorCpp(components, editorCppIncludes) : Enumerable.Empty<string>();
 
@@ -158,7 +158,7 @@ namespace Onyx.CodeGen.ComponentDSL
             using (codeGenerator.EnterScope($"namespace {currentNamespace}"))
             using (codeGenerator.EnterClass($"struct {component.Name}"))
             {
-                bool isRuntimeOnly = component.IsRuntimeOnly;
+                bool isCodeOnly = component.IsCodeOnly;
                 bool isTransient = component.IsTransient;
 
                 if (isTransient)
@@ -166,12 +166,12 @@ namespace Onyx.CodeGen.ComponentDSL
                     codeGenerator.Append("static constexpr bool IsTransient = true;");
                 }
 
-                if (isRuntimeOnly)
+                if (isCodeOnly)
                 {
-                    codeGenerator.Append("static constexpr bool IsRuntimeOnly = true;");
+                    codeGenerator.Append("static constexpr bool IsCodeOnly = true;");
                 }
 
-                if (isRuntimeOnly || isTransient)
+                if (isCodeOnly || isTransient)
                 {
                     codeGenerator.AppendLine();
                 }
@@ -330,7 +330,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 bool appendNewLine = false;
                 foreach (var component in components)
                 {
-                    bool hasEditorFields = component.Fields.Any(component => component.IsHidden == false);
+                    bool hasEditorFields = component.Fields.Any(field => field.IsHidden == false);
                     if (hasEditorFields == false)
                     {
                         continue;
@@ -368,7 +368,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 bool appendNewLine = false;
                 foreach( var component in components )
                 {
-                    bool hasEditorFields = component.Fields.Any( component => component.IsHidden == false );
+                    bool hasEditorFields = component.Fields.Any( field => field.IsHidden == false );
                     if( hasEditorFields == false )
                     {
                         continue;

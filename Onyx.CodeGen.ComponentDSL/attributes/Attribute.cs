@@ -33,11 +33,11 @@
         }
     }
 
-    internal class RuntimeOnlyAttribute : Attribute
+    internal class CodeOnlyAttribute : Attribute
     {
         public override string ToString()
         {
-            return "RuntimeOnly";
+            return "CodeOnly";
         }
     }
 
