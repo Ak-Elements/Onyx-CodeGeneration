@@ -129,12 +129,21 @@ namespace Onyx.CodeGen.Core
                     break;
                 }
                 case "declaration_list":
+                {
                     List<Function> globalFunctions;
                     ExtractFunctionDefinitions(cursor, namespaceStack, out globalFunctions);
                     outGlobalFunctions.AddRange(globalFunctions);
                     break;
+                }
                 case "enum_specifier":
+                {
+                    Type newType = new Type();
+                    if (ExtractEnumType(cursor, ref newType, localNamespaceStack))
+                    {
+                        outTypes.Add(newType);
+                    }
                     break;
+                }
             }
 
             // recurse into children for all other nodes
@@ -144,74 +153,7 @@ namespace Onyx.CodeGen.Core
             }
         }
 
-        private void ExtractAlias(TSCursor cursor, out Type outType, List<string> namespaceStack)
-        {
-            ReadOnlySpan<char> aliasName = "";
-            ReadOnlySpan<char> alisedType = "";
-            bool isTemplate = false;
-            IEnumerable<string> templateArguments = Enumerable.Empty<string>();
-
-            foreach (var child in cursor.children())
-            {
-                TSNode node = cursor.current_node();
-                string sym = cursor.current_symbol();
-
-                if (sym == "type_identifier")
-                {
-                    aliasName = GetNodeContent(node);
-                }
-
-                if ((sym == "type_descriptor") || (sym == "primitive_type"))
-                {
-                    alisedType = GetNodeContent(node);
-                    foreach (var typeChild in cursor.children())
-                    {
-                        var typeSymbol = typeChild.current_symbol();
-                        if ((typeSymbol == "type_identifier") || (typeSymbol == "qualified_identifier"))
-                        {
-                            foreach (var typeIdentifierChild in typeChild.children())
-                            {
-                                if (typeIdentifierChild.current_symbol() == "template_type")
-                                {
-                                    templateArguments = GetTemplateParameters(typeIdentifierChild);
-                                    isTemplate = true;
-                                }
-                            }
-                        }
-                        else if (typeSymbol == "template_type")
-                        {
-                            // Specialized template parameters
-                            templateArguments = GetTemplateParameters(typeChild);
-                        }
-                    }
-                }
-            }
-
-            string name = aliasName.ToString();
-            string namespaceStr = string.Join("::", namespaceStack);
-            var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
-
-            if (isTemplate)
-            {
-                outType = new TemplateType();
-            }
-            else
-            {
-                outType = new Type();
-            }
-
-            outType.Name = name;
-            outType.FullyQualifiedName = fullyQualifiedName;
-            outType.Namespace = namespaceStr;
-            outType.TypeIdentifier = "alias";
-            outType.AbsolutePath = filePath;
-            outType.IsAliased = true;
-            outType.AliasedType = alisedType.ToString();
-            outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
-            outType.SpecializedTemplateParameters = templateArguments.ToList();
-        }
-
-        bool ExtractType(TSCursor cursor, string type, ref Type outType, IReadOnlyList<string> currentNamespace)
+        private bool ExtractType(TSCursor cursor, string type, ref Type outType, IReadOnlyList<string> currentNamespace)
         {
             ReadOnlySpan<char> className = "";
             bool isForwardDeclaration = true;
@@ -294,7 +236,114 @@ namespace Onyx.CodeGen.Core
             return false;
         }
 
-        void ExtractFunctionDefinitions(TSCursor cursor, IReadOnlyList<string> currentNamespace, out List<Function> outFunctions)
+        private void ExtractAlias(TSCursor cursor, out Type outType, List<string> namespaceStack)
+        {
+            ReadOnlySpan<char> aliasName = "";
+            ReadOnlySpan<char> alisedType = "";
+            bool isTemplate = false;
+            IEnumerable<string> templateArguments = Enumerable.Empty<string>();
+
+            foreach (var child in cursor.children())
+            {
+                TSNode node = cursor.current_node();
+                string sym = cursor.current_symbol();
+
+                if (sym == "type_identifier")
+                {
+                    aliasName = GetNodeContent(node);
+                }
+
+                if ((sym == "type_descriptor") || (sym == "primitive_type"))
+                {
+                    alisedType = GetNodeContent(node);
+                    foreach (var typeChild in cursor.children())
+                    {
+                        var typeSymbol = typeChild.current_symbol();
+                        if ((typeSymbol == "type_identifier") || (typeSymbol == "qualified_identifier"))
+                        {
+                            foreach (var typeIdentifierChild in typeChild.children())
+                            {
+                                if (typeIdentifierChild.current_symbol() == "template_type")
+                                {
+                                    templateArguments = GetTemplateParameters(typeIdentifierChild);
+                                    isTemplate = true;
+                                }
+                            }
+                        }
+                        else if (typeSymbol == "template_type")
+                        {
+                            // Specialized template parameters
+                            templateArguments = GetTemplateParameters(typeChild);
+                        }
+                    }
+                }
+            }
+
+            string name = aliasName.ToString();
+            string namespaceStr = string.Join("::", namespaceStack);
+            var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
+
+            if (isTemplate)
+            {
+                outType = new TemplateType();
+            }
+            else
+            {
+                outType = new Type();
+            }
+
+            outType.Name = name;
+            outType.FullyQualifiedName = fullyQualifiedName;
+            outType.Namespace = namespaceStr;
+            outType.TypeIdentifier = "alias";
+            outType.AbsolutePath = filePath;
+            outType.IsAliased = true;
+            outType.AliasedType = alisedType.ToString();
+            outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
+            outType.SpecializedTemplateParameters = templateArguments.ToList();
+        }
+
+        private bool ExtractEnumType(TSCursor cursor, ref Type outType, IReadOnlyList<string> currentNamespace)
+        {
+            ReadOnlySpan<char> className = "";
+            bool isForwardDeclaration = true;
+
+            foreach (var child in cursor.children())
+            {
+                TSNode node = cursor.current_node();
+                string sym = cursor.current_symbol();
+                if ((sym == "type_identifier") && className.IsEmpty)
+                {
+                    className = GetNodeContent(node);
+                }
+
+                if (sym == "enumerator_list")
+                {
+                    isForwardDeclaration = false;
+                }
+            }
+
+            if (isForwardDeclaration == false)
+            {
+                string name = className.ToString();
+
+                string namespaceStr = string.Join("::", currentNamespace);
+                var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
+                outType.Name = name;
+                outType.FullyQualifiedName = fullyQualifiedName;
+                outType.Namespace = namespaceStr;
+                outType.TypeIdentifier = "enum";
+                outType.AbsolutePath = filePath;
+                outType.Inherits = [];
+                outType.HasTypeId = false;
+                outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath).Replace('\\', '/');
+                return true;
+            }
+
+            return false;
+        }
+
+        private void ExtractFunctionDefinitions(TSCursor cursor, IReadOnlyList<string> currentNamespace, out List<Function> outFunctions)
         {
             outFunctions = new List<Function>();
 

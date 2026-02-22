@@ -47,7 +47,7 @@ namespace Onyx.CodeGen.ComponentDSL
         }
 
         public void Generate(string componentDefinitionPath, List<string> outGeneratedFiles, List<string> outGeneratedEditorFiles)
-        { 
+        {
             List<Component> components = Parse(componentDefinitionPath);
 
             // Generate
