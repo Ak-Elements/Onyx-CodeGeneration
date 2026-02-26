@@ -18,7 +18,11 @@ namespace Onyx.CodeGen.Core
 
         public void Init(IEnumerable<string> sources, IEnumerable<string> includeDirectories)
         {
+#if DEBUG
+            foreach (var source in sources)
+#else
             Parallel.ForEach(sources, source =>
+#endif   
             {
                 CppParser parser = new CppParser(includeDirectories);
                 List<Type> parsedTypes;
@@ -39,7 +43,11 @@ namespace Onyx.CodeGen.Core
 
                     types[type.FullyQualifiedName] = type;
                 }
-            });
+            }
+#if DEBUG
+#else
+            );
+#endif
 
             globalFunctions = new ConcurrentBag<Function>(globalFunctions.Distinct());
 

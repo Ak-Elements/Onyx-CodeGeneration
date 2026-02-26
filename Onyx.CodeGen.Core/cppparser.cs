@@ -109,8 +109,8 @@ namespace Onyx.CodeGen.Core
                                 }
                                 case "alias_declaration":
                                 {
-                                    Type newType;
-                                    ExtractAlias(cursor, out newType, localNamespaceStack);    
+                                    var newType = templateType as Type;
+                                    ExtractAlias(cursor, ref newType, localNamespaceStack);    
                                     outTypes.Add(newType);
                                     break;
                                 }
@@ -123,8 +123,8 @@ namespace Onyx.CodeGen.Core
                 case "alias_declaration":
                 case "type_definition":
                 {
-                    Type newType;
-                    ExtractAlias(cursor, out newType, localNamespaceStack);
+                    Type newType = new Type();
+                    ExtractAlias(cursor, ref newType, localNamespaceStack);
                     outTypes.Add(newType);
                     break;
                 }
@@ -236,12 +236,16 @@ namespace Onyx.CodeGen.Core
             return false;
         }
 
-        private void ExtractAlias(TSCursor cursor, out Type outType, List<string> namespaceStack)
+        private void ExtractAlias(TSCursor cursor, ref Type type, List<string> namespaceStack)
         {
             ReadOnlySpan<char> aliasName = "";
             ReadOnlySpan<char> alisedType = "";
-            bool isTemplate = false;
             IEnumerable<string> templateArguments = Enumerable.Empty<string>();
+
+            if (filePath.Contains("vectornodes"))
+            {
+                Console.WriteLine();
+            }
 
             foreach (var child in cursor.children())
             {
@@ -266,7 +270,6 @@ namespace Onyx.CodeGen.Core
                                 if (typeIdentifierChild.current_symbol() == "template_type")
                                 {
                                     templateArguments = GetTemplateParameters(typeIdentifierChild);
-                                    isTemplate = true;
                                 }
                             }
                         }
@@ -283,24 +286,15 @@ namespace Onyx.CodeGen.Core
             string namespaceStr = string.Join("::", namespaceStack);
             var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
 
-            if (isTemplate)
-            {
-                outType = new TemplateType();
-            }
-            else
-            {
-                outType = new Type();
-            }
-
-            outType.Name = name;
-            outType.FullyQualifiedName = fullyQualifiedName;
-            outType.Namespace = namespaceStr;
-            outType.TypeIdentifier = "alias";
-            outType.AbsolutePath = filePath;
-            outType.IsAliased = true;
-            outType.AliasedType = alisedType.ToString();
-            outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
-            outType.SpecializedTemplateParameters = templateArguments.ToList();
+            type.Name = name;
+            type.FullyQualifiedName = fullyQualifiedName;
+            type.Namespace = namespaceStr;
+            type.TypeIdentifier = "alias";
+            type.AbsolutePath = filePath;
+            type.IsAliased = true;
+            type.AliasedType = alisedType.ToString();
+            type.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
+            type.SpecializedTemplateParameters = templateArguments.ToList();
         }
 
         private bool ExtractEnumType(TSCursor cursor, ref Type outType, IReadOnlyList<string> currentNamespace)

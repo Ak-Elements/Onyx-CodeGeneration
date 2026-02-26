@@ -362,7 +362,7 @@ namespace Onyx.CodeGen.ComponentDSL
             outEditorIncludes.Add("onyx/ui/propertygrid.h");
 
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
-            IEnumerable<string> currentNamespace = [ "Onyx", "Ui"];
+            IEnumerable<string> currentNamespace = [ "Onyx", "Ui" ];
             using( codeGenerator.EnterScope( $"namespace Onyx::Ui" ) )
             {
                 bool appendNewLine = false;
