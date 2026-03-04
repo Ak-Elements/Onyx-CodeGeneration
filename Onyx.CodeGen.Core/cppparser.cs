@@ -22,7 +22,7 @@ namespace Onyx.CodeGen.Core
 
             using (var parser = new TSParser())
             {
-                var treesitter_cpp = TsCpp.tree_sitter_cpp();
+                var treesitter_cpp = TreeSitterLanguageCpp.tree_sitter_cpp();
                 TSLanguage language = new TSLanguage(treesitter_cpp);
                 bool setLanguage = parser.set_language(language);
 
@@ -78,72 +78,72 @@ namespace Onyx.CodeGen.Core
                     break;
                 case "class_specifier":
                 case "struct_specifier":
-                {
-                    Type newType = new Type();
-                    if (ExtractType(cursor, sym == "class_specifier" ? "class" : "struct", ref newType, localNamespaceStack))
                     {
-                        outTypes.Add(newType);
-                    }
-                    return;
-                }
-                case "template_declaration":
-                {
-                    var templateParameters = GetTemplateParameters(cursor);
-                    if (templateParameters.Any())
-                    {
-                        TemplateType templateType = new TemplateType();
-                        templateType.TemplateParameters = templateParameters.ToList();
-                        foreach (var child in cursor.children())
+                        Type newType = new Type();
+                        if (ExtractType(cursor, sym == "class_specifier" ? "class" : "struct", ref newType, localNamespaceStack))
                         {
-                            switch (child.current_symbol())
-                            {
-                                case "class_specifier":
-                                case "struct_specifier":
-                                {
-                                    var newType = templateType as Type;
-                                    if (ExtractType(cursor, child.current_symbol() == "class_specifier" ? "template class" : "template struct", ref newType, localNamespaceStack))
-                                    {
-                                        outTypes.Add(newType);
-                                    }
-                                    break;
-                                }
-                                case "alias_declaration":
-                                {
-                                    var newType = templateType as Type;
-                                    ExtractAlias(cursor, ref newType, localNamespaceStack);    
-                                    outTypes.Add(newType);
-                                    break;
-                                }
-                            }
+                            outTypes.Add(newType);
                         }
                         return;
                     }
-                    break;
-                }
+                case "template_declaration":
+                    {
+                        var templateParameters = GetTemplateParameters(cursor);
+                        if (templateParameters.Any())
+                        {
+                            TemplateType templateType = new TemplateType();
+                            templateType.TemplateParameters = templateParameters.ToList();
+                            foreach (var child in cursor.children())
+                            {
+                                switch (child.current_symbol())
+                                {
+                                    case "class_specifier":
+                                    case "struct_specifier":
+                                        {
+                                            var newType = templateType as Type;
+                                            if (ExtractType(cursor, child.current_symbol() == "class_specifier" ? "template class" : "template struct", ref newType, localNamespaceStack))
+                                            {
+                                                outTypes.Add(newType);
+                                            }
+                                            break;
+                                        }
+                                    case "alias_declaration":
+                                        {
+                                            var newType = templateType as Type;
+                                            ExtractAlias(cursor, ref newType, localNamespaceStack);
+                                            outTypes.Add(newType);
+                                            break;
+                                        }
+                                }
+                            }
+                            return;
+                        }
+                        break;
+                    }
                 case "alias_declaration":
                 case "type_definition":
-                {
-                    Type newType = new Type();
-                    ExtractAlias(cursor, ref newType, localNamespaceStack);
-                    outTypes.Add(newType);
-                    break;
-                }
-                case "declaration_list":
-                {
-                    List<Function> globalFunctions;
-                    ExtractFunctionDefinitions(cursor, namespaceStack, out globalFunctions);
-                    outGlobalFunctions.AddRange(globalFunctions);
-                    break;
-                }
-                case "enum_specifier":
-                {
-                    Type newType = new Type();
-                    if (ExtractEnumType(cursor, ref newType, localNamespaceStack))
                     {
+                        Type newType = new Type();
+                        ExtractAlias(cursor, ref newType, localNamespaceStack);
                         outTypes.Add(newType);
+                        break;
                     }
-                    break;
-                }
+                case "declaration_list":
+                    {
+                        List<Function> globalFunctions;
+                        ExtractFunctionDefinitions(cursor, namespaceStack, out globalFunctions);
+                        outGlobalFunctions.AddRange(globalFunctions);
+                        break;
+                    }
+                case "enum_specifier":
+                    {
+                        Type newType = new Type();
+                        if (ExtractEnumType(cursor, ref newType, localNamespaceStack))
+                        {
+                            outTypes.Add(newType);
+                        }
+                        break;
+                    }
             }
 
             // recurse into children for all other nodes
@@ -181,13 +181,13 @@ namespace Onyx.CodeGen.Core
                     ExtractFunctionDefinitions(cursor, currentNamespace, out functions);
                 }
 
-                
+
                 if (sym == "template_type")
                 {
                     templateArguments = GetTemplateParameters(cursor);
                 }
-                       
-                
+
+
 
                 if (sym == "base_class_clause")
                 {
@@ -228,7 +228,7 @@ namespace Onyx.CodeGen.Core
                 {
                     outType.Functions = functions;
                 }
-                
+
                 outType.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath).Replace('\\', '/');
                 return true;
             }
@@ -349,31 +349,31 @@ namespace Onyx.CodeGen.Core
                     case "function_definition":
                     case "declaration":
                     case "field_declaration":
-                    {
-                        bool isStatic = false;
-                        foreach (var functionChild in cursor.children())
                         {
-                            switch (functionChild.current_symbol())
+                            bool isStatic = false;
+                            foreach (var functionChild in cursor.children())
                             {
-                                case "storage_class_specifier":
+                                switch (functionChild.current_symbol())
                                 {
-                                    var nodeContent = GetNodeContent(functionChild.current_node());
-                                    if (nodeContent is "static")
-                                        isStatic = true;
-                                    break;
+                                    case "storage_class_specifier":
+                                        {
+                                            var nodeContent = GetNodeContent(functionChild.current_node());
+                                            if (nodeContent is "static")
+                                                isStatic = true;
+                                            break;
+                                        }
+                                    case "function_declarator":
+                                        {
+                                            string functionName;
+                                            IReadOnlyList<FunctionParameter> functionArgs = ExtractFunctionParametersAndName(functionChild, out functionName);
+                                            outFunctions.Add(new Function() { Name = functionName, Namespace = string.Join("::", currentNamespace), IsStatic = isStatic, Parameters = functionArgs });
+                                            break;
+                                        }
                                 }
-                                case "function_declarator":
-                                {
-                                    string functionName;
-                                    IReadOnlyList<FunctionParameter> functionArgs = ExtractFunctionParametersAndName(functionChild, out functionName);
-                                    outFunctions.Add(new Function() { Name = functionName, Namespace = string.Join("::", currentNamespace), IsStatic = isStatic, Parameters = functionArgs });
-                                    break;
-                                }    
                             }
-                        }
 
-                        break;
-                    }
+                            break;
+                        }
                 }
             }
         }

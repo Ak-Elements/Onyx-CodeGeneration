@@ -51,11 +51,11 @@ namespace Onyx.CodeGen.TreeSitter
         public TSNode named_descendant_for_point_range(TSPoint start, TSPoint end) { return ts_node_named_descendant_for_point_range(this, start, end); }
         public bool eq(TSNode other) { return ts_node_eq(this, other); }
 
-        public string text(string data)
+        public ReadOnlySpan<char> text(string data)
         {
             uint beg = start_offset();
             uint end = end_offset();
-            return data.Substring((int)beg, (int)(end - beg));
+            return data.AsSpan((int)beg, (int)(end - beg));
         }
 
         #region PInvoke

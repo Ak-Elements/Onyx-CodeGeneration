@@ -69,6 +69,7 @@ namespace Onyx.CodeGen.CLI
             {
                 Console.Error.WriteLine("Missing toml config");
                 Console.Error.WriteLine("   onyx-codegen [path to config]");
+                return;
             }
 
             string configPath = args[0];
@@ -76,10 +77,10 @@ namespace Onyx.CodeGen.CLI
             var config = Tomlyn.Toml.ToModel<Config>(alltext, configPath);
 
             RunModuleCodeGeneration(config);
-            if( config.TargetConfig.IsExecutable )
+            if (config.TargetConfig.IsExecutable)
             {
                 RunProjectBootstrapGeneration(config);
-            };
+            }
         }
 
         static void RunProjectBootstrapGeneration(Config config)
@@ -88,7 +89,7 @@ namespace Onyx.CodeGen.CLI
             var projectGeneratedCodePath = config.Paths.BinaryDirectory;
 
             IReadOnlyList<string> includeDirectories = config.TargetConfig.IncludeDirectories;
-            
+
             IEnumerable<string> generatedSourceFiles = [];
             foreach (var includeDirectory in includeDirectories.Distinct())
             {
@@ -118,7 +119,7 @@ namespace Onyx.CodeGen.CLI
 
             codeGenerator.AddIncludes(includes);
             codeGenerator.AppendLine();
-            
+
             using (codeGenerator.EnterScope("namespace Onyx"))
             using (codeGenerator.EnterScope("void Init()"))
             {
@@ -150,10 +151,10 @@ namespace Onyx.CodeGen.CLI
 
             var outPublicPath = Path.Join(binaryDir, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
             var outPrivatePath = Path.Join(binaryDir, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
-            
+
             var editorBinaryPublicPath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
             var editorBinaryPrivatePath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
-            
+
             // output containing all files generated so consecutive runs can delete files that are no longer valid
             var generatedFilesPath = Path.Combine(binaryDir, "generatedfiles");
 
@@ -176,7 +177,7 @@ namespace Onyx.CodeGen.CLI
             typeDatabase.Init(cppSources, includeDirectories);
 
             IEnumerable<string> moduleNamespaceStack = targetNamespace.Split("::");
-            
+
             ComponentGenerator componentGenerator = new ComponentGenerator(typeDatabase,
                 sourceDir,
                 namespacePathSuffix,
@@ -208,7 +209,7 @@ namespace Onyx.CodeGen.CLI
             {
                 File.Delete(file);
             }
-            
+
             File.WriteAllLines(generatedFilesPath, generatedFiles);
         }
     }

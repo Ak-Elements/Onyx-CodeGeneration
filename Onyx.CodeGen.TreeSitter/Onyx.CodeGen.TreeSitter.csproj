@@ -10,16 +10,16 @@
     <!-- Build native dependencies -->
     <Exec Command="cmake -S ./external/ -B ./external/out" />
     <Exec Command="cmake --build ./external/out --config Release" />
-    
+
     <!-- Pick up files AFTER they exist -->
     <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
       <NativeLibs Include="external/out/Release/*.dll" />
     </ItemGroup>
-    
+
     <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
       <NativeLibs Include="external/out/*.so" />
     </ItemGroup>
-    
+
     <!-- Copy to output -->
     <Copy
       SourceFiles="@(NativeLibs)"

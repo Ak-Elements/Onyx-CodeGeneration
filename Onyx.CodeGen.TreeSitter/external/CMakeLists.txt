@@ -37,9 +37,27 @@ target_include_directories(tree-sitter-cpp PRIVATE
     tree-sitter-cpp/src
 )
 
+# --------------------------------------------------
+# tree-sitter-onyx grammar
+# --------------------------------------------------
+
+add_library(tree-sitter-onyx SHARED
+    tree-sitter-onyx/src/parser.c
+    tree-sitter-onyx.def
+)
+
+target_include_directories(tree-sitter-onyx PRIVATE
+    tree-sitter/lib/include
+    tree-sitter-cpp/src
+)
+
 target_compile_definitions(tree-sitter-cpp PRIVATE
     NDEBUG
 )
+target_compile_definitions(tree-sitter-onyx PRIVATE
+    NDEBUG
+)
 
-# tree-sitter-cpp depends on tree-sitter headers
+# tree-sitter-cpp and tree-sitter-onyx depends on tree-sitter headers
 target_link_libraries(tree-sitter-cpp PRIVATE tree-sitter)
+target_link_libraries(tree-sitter-onyx PRIVATE tree-sitter)

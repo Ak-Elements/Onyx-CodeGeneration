@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Buffers;
+using System.Runtime.InteropServices;
 
 namespace Onyx.CodeGen.TreeSitter
 {
@@ -56,6 +57,7 @@ namespace Onyx.CodeGen.TreeSitter
         public long goto_first_child_for_point(TSPoint point) { return ts_tree_cursor_goto_first_child_for_point(ref cursor, point); }
         public TSCursor copy() { return new TSCursor(ts_tree_cursor_copy(ref cursor), lang); }
 
+        public ReadOnlySpan<char> GetContent(string source) { return current_node().text(source); }
         public IEnumerable<TSCursor> children()
         {
             if (goto_first_child())

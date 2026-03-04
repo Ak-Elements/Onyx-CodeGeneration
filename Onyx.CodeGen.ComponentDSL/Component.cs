@@ -8,6 +8,7 @@
 
         internal string Name { get; set; } = string.Empty;
         internal string FullyQualifiedName { get; set; } = string.Empty;
+        internal string Path { get; set; } = string.Empty;
         internal List<Attribute> Attributes { get; set; } = [];
         internal List<Field> Fields { get; set; } = [];
 

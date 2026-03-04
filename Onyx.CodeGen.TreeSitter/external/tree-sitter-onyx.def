@@ -1,0 +1,3 @@
+LIBRARY TREE-SITTER-ONYX
+EXPORTS
+        tree_sitter_onyx

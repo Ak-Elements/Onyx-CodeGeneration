@@ -28,7 +28,7 @@ namespace Onyx.CodeGen.ComponentDSL
             bool hasEditorTarget,
             IEnumerable<string> includeDirectories,
             IEnumerable<string> moduleNamespaceStack
-            )
+        )
         {
             this.typeDatabase = typeDatabase;
             this.moduleSourcePath = moduleSourcePath;
@@ -39,7 +39,7 @@ namespace Onyx.CodeGen.ComponentDSL
             this.outPrivatePath = outPrivatePath;
             this.outEditorPublicPath = outEditorPublicPath;
             this.outEditorPrivatePath = outEditorPrivatePath;
-            
+
             this.includeDirectories = includeDirectories;
             this.moduleNamespaceStack = moduleNamespaceStack;
 
@@ -48,7 +48,11 @@ namespace Onyx.CodeGen.ComponentDSL
 
         public void Generate(string componentDefinitionPath, List<string> outGeneratedFiles, List<string> outGeneratedEditorFiles)
         {
-            List<Component> components = Parse(componentDefinitionPath);
+            List<Component> components;
+            OnyxParser parser = new OnyxParser(typeDatabase, includeDirectories, moduleNamespaceStack);
+            parser.Parse(componentDefinitionPath, out components);
+            //return;
+            //components = Parse(componentDefinitionPath);
 
             // Generate
             var outFileName = Path.GetFileNameWithoutExtension(componentDefinitionPath);
@@ -73,7 +77,7 @@ namespace Onyx.CodeGen.ComponentDSL
             IEnumerable<string> headerCodeLines = GenerateComponentHeader(components, componentHeaderIncludes);
             IEnumerable<string> componentCppCodeLines = GenerateComponentCpp(components, componentHeaderIncludePath, out componentCppIncludes);
 
-            bool hasEditorComponents = components.Any( component => component.IsHidden == false && component.IsCodeOnly == false );
+            bool hasEditorComponents = components.Any(component => component.IsHidden == false && component.IsCodeOnly == false);
             IEnumerable<string> editorHeaderCodeLines = hasEditorComponents ? GenerateComponentInspectorHeader(components, editorHeaderIncludes) : Enumerable.Empty<string>();
             IEnumerable<string> editorCppCodeLines = hasEditorComponents ? GenerateComponentInspectorCpp(components, editorCppIncludes) : Enumerable.Empty<string>();
 
@@ -114,8 +118,8 @@ namespace Onyx.CodeGen.ComponentDSL
                 outGeneratedEditorFiles.Add(editorHeaderPath);
                 outGeneratedEditorFiles.Add(editorCppPath);
                 File.WriteAllText(editorHeaderPath, editorHeaderGenerator.GetCode());
-                File.WriteAllText(editorCppPath, editorCppGenerator.GetCode()); 
-            }           
+                File.WriteAllText(editorCppPath, editorCppGenerator.GetCode());
+            }
         }
 
         private IEnumerable<string> GenerateComponentHeader(IReadOnlyList<Component> components, List<string> outIncludes)
@@ -128,7 +132,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 GenerateComponentDeclaration(codeGenerator, currentNamespace, component, outIncludes);
             }
 
-            var nonTransientComponents = components.Where(component => ( component.IsTransient == false ) && component.Fields.Any( f => f.IsTransient == false ) );
+            var nonTransientComponents = components.Where(component => (component.IsTransient == false) && component.Fields.Any(f => f.IsTransient == false));
             if (nonTransientComponents.Any())
             {
                 codeGenerator.AppendLine();
@@ -217,7 +221,11 @@ namespace Onyx.CodeGen.ComponentDSL
                             }
                             else
                             {
-                                codeGenerator.Append($"{fieldTypeName} {field.Name} {{ {field.DefaultValue} }};");
+                                // TODO: Default value could support initalizer list {}, assignemt =
+                                if (field.DefaultValue[0] == '{')
+                                    codeGenerator.Append($"{fieldTypeName} {field.Name} {field.DefaultValue};");
+                                else
+                                    codeGenerator.Append($"{fieldTypeName} {field.Name} {{ {field.DefaultValue} }};");
                             }
                         }
                     }
@@ -282,7 +290,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
                             }
                         }
-                        
+
                         codeGenerator.AppendLine();
 
                         using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
@@ -362,14 +370,14 @@ namespace Onyx.CodeGen.ComponentDSL
             outEditorIncludes.Add("onyx/ui/propertygrid.h");
 
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
-            IEnumerable<string> currentNamespace = [ "Onyx", "Ui" ];
-            using( codeGenerator.EnterScope( $"namespace Onyx::Ui" ) )
+            IEnumerable<string> currentNamespace = ["Onyx", "Ui"];
+            using (codeGenerator.EnterScope($"namespace Onyx::Ui"))
             {
                 bool appendNewLine = false;
-                foreach( var component in components )
+                foreach (var component in components)
                 {
-                    bool hasEditorFields = component.Fields.Any( field => field.IsHidden == false );
-                    if( hasEditorFields == false )
+                    bool hasEditorFields = component.Fields.Any(field => field.IsHidden == false);
+                    if (hasEditorFields == false)
                     {
                         continue;
                     }
@@ -385,16 +393,16 @@ namespace Onyx.CodeGen.ComponentDSL
                     }
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
-                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{ componentTypeName }>::Draw({componentTypeName}& component, bool /*forceShow*/)";
-                    using( codeGenerator.EnterScope(componentInspectorSignature) )
+                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{componentTypeName}>::Draw({componentTypeName}& component, bool /*forceShow*/)";
+                    using (codeGenerator.EnterScope(componentInspectorSignature))
                     {
                         codeGenerator.Append("bool isModified = false;");
-                        foreach( var field in component.Fields )
+                        foreach (var field in component.Fields)
                         {
-                            if( field.IsHidden )
+                            if (field.IsHidden)
                                 continue;
 
-                            if( field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute )
+                            if (field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute)
                             {
                                 codeGenerator.Append($"PropertyGrid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
                             }
@@ -498,9 +506,9 @@ namespace Onyx.CodeGen.ComponentDSL
                                 attributeParameters.Add(attributeParameterString);
                                 attributeParameterString = "";
                             }
-                            else if ( string.IsNullOrEmpty(attributeTypeString) == false )
+                            else if (string.IsNullOrEmpty(attributeTypeString) == false)
                             {
-                                if( string.IsNullOrEmpty(attributeParameterString) == false )
+                                if (string.IsNullOrEmpty(attributeParameterString) == false)
                                 {
                                     attributeParameters.Add(attributeParameterString);
                                     attributeParameterString = "";
@@ -578,9 +586,10 @@ namespace Onyx.CodeGen.ComponentDSL
                 bool hasDefaultValue = trimmed.Any(c => c == '=' || c == '{');
                 if (hasDefaultValue)
                 {
-                    defaultValue = string.Join(", ", parts[2..].Select(value => {
-                        var literal = GetFormatLiteral( type );
-                        
+                    defaultValue = string.Join(", ", parts[2..].Select(value =>
+                    {
+                        var literal = GetFormatLiteral(type);
+
                         if (value.EndsWith(literal))
                             return value;
 
@@ -607,7 +616,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
         private string GetFormatLiteral(Core.Type? type)
         {
-            if (type != null && DSLTypes.TYPE_TO_LITERAL_SUFFIX.TryGetValue(type.Name, out string? literalSuffix) )
+            if (type != null && DSLTypes.TYPE_TO_LITERAL_SUFFIX.TryGetValue(type.Name, out string? literalSuffix))
                 return literalSuffix;
 
             return "";
