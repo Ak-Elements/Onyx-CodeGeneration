@@ -242,11 +242,6 @@ namespace Onyx.CodeGen.Core
             ReadOnlySpan<char> alisedType = "";
             IEnumerable<string> templateArguments = Enumerable.Empty<string>();
 
-            if (filePath.Contains("vectornodes"))
-            {
-                Console.WriteLine();
-            }
-
             foreach (var child in cursor.children())
             {
                 TSNode node = cursor.current_node();
