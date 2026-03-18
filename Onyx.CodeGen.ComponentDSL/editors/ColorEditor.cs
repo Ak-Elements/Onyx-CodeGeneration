@@ -7,7 +7,7 @@ namespace Onyx.CodeGen.ComponentDSL
         [Editor("Color"), AllowedTypes("Vector3f32", "Vector4f32")]
         public void Generate(CodeGenerator codeGenerator, string fieldName, Field field)
         {
-            codeGenerator.Append($"isModified |= PropertyGrid::DrawColorProperty(\"{field.DisplayName}\", {fieldName});");
+            codeGenerator.Append($"isModified |= property_grid::DrawColorProperty(\"{field.DisplayName}\", {fieldName});");
         }  
     }
 }

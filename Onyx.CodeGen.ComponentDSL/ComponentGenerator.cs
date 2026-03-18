@@ -136,7 +136,7 @@ namespace Onyx.CodeGen.ComponentDSL
             if (nonTransientComponents.Any())
             {
                 codeGenerator.AppendLine();
-                using (codeGenerator.EnterScope($"namespace Onyx"))
+                using (codeGenerator.EnterScope($"namespace onyx"))
                 {
                     foreach (var component in nonTransientComponents)
                     {
@@ -235,7 +235,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
         private void GenerateComponentSerializerDeclaration(CodeGenerator generator, Component component)
         {
-            var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("Onyx");
+            var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("onyx");
             generator.Append("template <>");
             using (generator.EnterClass($"struct Serialization<{componentTypeName}>"))
             {
@@ -257,11 +257,11 @@ namespace Onyx.CodeGen.ComponentDSL
                 includePaths.Add("onyx/serialize/serializer.h");
                 includePaths.Add("onyx/serialize/deserializer.h");
 
-                using (codeGenerator.EnterScope($"namespace Onyx"))
+                using (codeGenerator.EnterScope($"namespace onyx"))
                 {
                     foreach (var component in serializableComponents)
                     {
-                        var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("Onyx");
+                        var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("onyx");
                         var serializerComponentParameterName = char.ToLower(component.Name[0]) + component.Name[1..];
                         using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
                         {
@@ -332,8 +332,8 @@ namespace Onyx.CodeGen.ComponentDSL
 
             outIncludes.Add("onyx/ui/propertyinspector.h");
 
-            IEnumerable<string> currentNamespace = ["Onyx", "Ui"];
-            using (codeGenerator.EnterScope("namespace Onyx::Ui"))
+            IEnumerable<string> currentNamespace = ["onyx", "ui"];
+            using (codeGenerator.EnterScope("namespace onyx::ui"))
             {
                 bool appendNewLine = false;
                 foreach (var component in components)
@@ -370,8 +370,8 @@ namespace Onyx.CodeGen.ComponentDSL
             outEditorIncludes.Add("onyx/ui/propertygrid.h");
 
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
-            IEnumerable<string> currentNamespace = ["Onyx", "Ui"];
-            using (codeGenerator.EnterScope($"namespace Onyx::Ui"))
+            IEnumerable<string> currentNamespace = ["onyx", "ui"];
+            using (codeGenerator.EnterScope($"namespace onyx::ui"))
             {
                 bool appendNewLine = false;
                 foreach (var component in components)
@@ -404,7 +404,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
                             if (field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute)
                             {
-                                codeGenerator.Append($"PropertyGrid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
+                                codeGenerator.Append($"property_grid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
                             }
 
                             // TODO: Add visibility check here

@@ -120,16 +120,16 @@ namespace Onyx.CodeGen.CLI
             codeGenerator.AddIncludes(includes);
             codeGenerator.AppendLine();
 
-            using (codeGenerator.EnterScope("namespace Onyx"))
+            using (codeGenerator.EnterScope("namespace onyx"))
             using (codeGenerator.EnterScope("void Init()"))
             {
                 var registerEngineModuleFunctions = allGlobalFunctions.Where(function => function.Name == "Init");
                 foreach (var function in registerEngineModuleFunctions)
                 {
                     string fullyQualifiedName = function.Namespace + "::" + function.Name;
-                    if (fullyQualifiedName.StartsWith("Onyx::"))
+                    if (fullyQualifiedName.StartsWith("onyx::"))
                     {
-                        fullyQualifiedName = fullyQualifiedName["Onyx::".Length..];
+                        fullyQualifiedName = fullyQualifiedName["onyx::".Length..];
                     }
 
                     codeGenerator.Append($"{fullyQualifiedName}();");

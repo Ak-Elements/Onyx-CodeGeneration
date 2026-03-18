@@ -88,7 +88,7 @@ namespace Onyx.CodeGen.Core
                     }
 
                     type.Inherits = inherits;
-                } 
+                }
                 else
                 {
                     type.AliasedType = aliasedType.FullyQualifiedName;
@@ -101,7 +101,7 @@ namespace Onyx.CodeGen.Core
 
             // sanitize and cleanup inhertied classes
             Dictionary<string, List<string>> typeInheritanceChain = new Dictionary<string, List<string>>();
-            foreach(var type in types.Values)
+            foreach (var type in types.Values)
             {
                 var inheritanceChain = ResolveFullInhertiance(type, typeInheritanceChain);
                 type.Inherits = inheritanceChain.ToList();
@@ -277,7 +277,7 @@ namespace Onyx.CodeGen.Core
             var templateStartIndex = typeName.IndexOf('<') + 1;
             if (templateStartIndex == 0)
             {
-                return templateTypes; 
+                return templateTypes;
             }
 
             var templateEndIndex = typeName.LastIndexOf('>');

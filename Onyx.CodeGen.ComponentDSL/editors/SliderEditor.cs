@@ -58,7 +58,7 @@ namespace Onyx.CodeGen.ComponentDSL
             }
 
             numericOptions.Add(".IsSlider = true");
-            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ { string.Join(", " ,numericOptions) } }} );");
+            codeGenerator.Append($"isModified |= property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ { string.Join(", " ,numericOptions) } }} );");
         }  
     }
 }

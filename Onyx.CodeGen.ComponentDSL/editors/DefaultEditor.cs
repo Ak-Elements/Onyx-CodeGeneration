@@ -11,7 +11,7 @@ namespace Onyx.CodeGen.ComponentDSL
     {
         public void Generate(CodeGenerator codeGenerator, string fieldName, Field field)
         {
-            codeGenerator.Append($"isModified |= PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName});");
+            codeGenerator.Append($"isModified |= property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName});");
         }  
     }
 }

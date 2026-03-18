@@ -83,15 +83,15 @@ namespace Onyx.CodeGen.ComponentDSL
             {
                 using (codeGenerator.EnterScope())
                 {
-                    codeGenerator.Append($"auto displayUnit = QuantityCast<Units::{unitAttribute.DisplayUnit}, Units::{unitAttribute.Unit}>({fieldName});");
+                    codeGenerator.Append($"auto displayUnit = QuantityCast<units::{unitAttribute.DisplayUnit}, units::{unitAttribute.Unit}>({fieldName});");
 
                     var propertyGridCall = numericOptions.Any() ?
-                        $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
-                        $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", displayUnit)";
+                        $"property_grid::DrawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
+                        $"property_grid::DrawProperty(\"{field.DisplayName}\", displayUnit)";
 
                     using (codeGenerator.EnterScope($"if( {propertyGridCall} )"))
                     {
-                        codeGenerator.Append($"{fieldName} = QuantityCast<Units::{unitAttribute.Unit}, Units::{unitAttribute.DisplayUnit}>(displayUnit);");
+                        codeGenerator.Append($"{fieldName} = QuantityCast<units::{unitAttribute.Unit}, units::{unitAttribute.DisplayUnit}>(displayUnit);");
                         codeGenerator.Append($"isModified = true;");
                     }
                 }
@@ -99,8 +99,8 @@ namespace Onyx.CodeGen.ComponentDSL
             else
             {
                 var propertyGridCall = numericOptions.Any() ?
-                    $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ {string.Join(", ", numericOptions)} }} )" :
-                    $"PropertyGrid::DrawProperty(\"{field.DisplayName}\", {fieldName})";
+                    $"property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ {string.Join(", ", numericOptions)} }} )" :
+                    $"property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName})";
 
                 codeGenerator.Append($"isModified |= {propertyGridCall};");
             }
