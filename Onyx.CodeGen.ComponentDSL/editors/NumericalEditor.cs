@@ -3,10 +3,10 @@ using Onyx.CodeGen.Core.Math;
 
 namespace Onyx.CodeGen.ComponentDSL
 {
-    [AllowedTypes("onyxU8",
-            "onyxU16",
-            "onyxU32",
-            "onyxU64",
+    [AllowedTypes("uint8_t",
+            "uint16_t",
+            "uint32_t",
+            "uint64_t",
             "onyxU128",
             "onyxS8",
             "onyxS16",
@@ -83,15 +83,15 @@ namespace Onyx.CodeGen.ComponentDSL
             {
                 using (codeGenerator.EnterScope())
                 {
-                    codeGenerator.Append($"auto displayUnit = QuantityCast<units::{unitAttribute.DisplayUnit}, units::{unitAttribute.Unit}>({fieldName});");
+                    codeGenerator.Append($"auto displayUnit = quantityCast<units::{unitAttribute.DisplayUnit}, units::{unitAttribute.Unit}>({fieldName});");
 
                     var propertyGridCall = numericOptions.Any() ?
-                        $"property_grid::DrawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
-                        $"property_grid::DrawProperty(\"{field.DisplayName}\", displayUnit)";
+                        $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
+                        $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit)";
 
                     using (codeGenerator.EnterScope($"if( {propertyGridCall} )"))
                     {
-                        codeGenerator.Append($"{fieldName} = QuantityCast<units::{unitAttribute.Unit}, units::{unitAttribute.DisplayUnit}>(displayUnit);");
+                        codeGenerator.Append($"{fieldName} = quantityCast<units::{unitAttribute.Unit}, units::{unitAttribute.DisplayUnit}>(displayUnit);");
                         codeGenerator.Append($"isModified = true;");
                     }
                 }
@@ -99,8 +99,8 @@ namespace Onyx.CodeGen.ComponentDSL
             else
             {
                 var propertyGridCall = numericOptions.Any() ?
-                    $"property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ {string.Join(", ", numericOptions)} }} )" :
-                    $"property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName})";
+                    $"property_grid::drawProperty(\"{field.DisplayName}\", {fieldName}, {{ {string.Join(", ", numericOptions)} }} )" :
+                    $"property_grid::drawProperty(\"{field.DisplayName}\", {fieldName})";
 
                 codeGenerator.Append($"isModified |= {propertyGridCall};");
             }

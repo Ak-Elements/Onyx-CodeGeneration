@@ -67,23 +67,21 @@ namespace Onyx.CodeGen.Core
 
         public IDisposable EnterScope()
         {
-            Append("{");
+            stringBuilder.Append("{");
             ++scope;
             return new CodeScope(() => { --scope; Append("}"); });
         }
 
         public IDisposable EnterScope(string scopeName)
         {
-            Append(scopeName);
-            Append("{");
+            Append($"{scopeName} {{");
             ++scope;
             return new CodeScope(() => { --scope; Append("}"); });
         }
 
         public IDisposable EnterScope(string scopeName, string scopeBegin, string scopeEnd)
         {
-            Append(scopeName);
-            Append(scopeBegin);
+            Append($"{scopeName} {scopeBegin}");
             ++scope;
             return new CodeScope(() => { --scope; Append(scopeEnd); });
         }

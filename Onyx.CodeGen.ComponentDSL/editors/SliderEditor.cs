@@ -3,10 +3,10 @@ using Onyx.CodeGen.Core.Math;
 
 namespace Onyx.CodeGen.ComponentDSL
 {
-    [AllowedTypes("onyxU8",
-            "onyxU16",
-            "onyxU32",
-            "onyxU64",
+    [AllowedTypes("uint8_t",
+            "uint16_t",
+            "uint32_t",
+            "uint64_t",
             "onyxU128",
             "onyxS8",
             "onyxS16",
@@ -58,7 +58,7 @@ namespace Onyx.CodeGen.ComponentDSL
             }
 
             numericOptions.Add(".IsSlider = true");
-            codeGenerator.Append($"isModified |= property_grid::DrawProperty(\"{field.DisplayName}\", {fieldName}, {{ { string.Join(", " ,numericOptions) } }} );");
+            codeGenerator.Append($"isModified |= property_grid::drawProperty(\"{field.DisplayName}\", {fieldName}, {{ { string.Join(", " ,numericOptions) } }} );");
         }  
     }
 }

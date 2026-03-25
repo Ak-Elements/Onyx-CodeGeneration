@@ -180,7 +180,7 @@ namespace Onyx.CodeGen.ComponentDSL
                     codeGenerator.AppendLine();
                 }
 
-                codeGenerator.Append($"static constexpr StringId32 TypeId = \"{component.FullyQualifiedName}\";");
+                codeGenerator.Append($"static constexpr StringId32 TypeId {{ \"{component.FullyQualifiedName}\" }};");
                 codeGenerator.Append("StringId32 GetTypeId() const { return TypeId; }");
                 codeGenerator.AppendLine();
 
@@ -239,8 +239,8 @@ namespace Onyx.CodeGen.ComponentDSL
             generator.Append("template <>");
             using (generator.EnterClass($"struct Serialization<{componentTypeName}>"))
             {
-                generator.Append($"static bool Serialize(Serializer& serializer, const {componentTypeName}& {char.ToLower(component.Name[0]) + component.Name[1..]});");
-                generator.Append($"static bool Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name});");
+                generator.Append($"static bool serialize(Serializer& serializer, const {componentTypeName}& {char.ToLower(component.Name[0]) + component.Name[1..]});");
+                generator.Append($"static bool deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name});");
             }
         }
 
@@ -263,11 +263,11 @@ namespace Onyx.CodeGen.ComponentDSL
                     {
                         var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName("onyx");
                         var serializerComponentParameterName = char.ToLower(component.Name[0]) + component.Name[1..];
-                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
+                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::serialize(Serializer& serializer, const {componentTypeName}& {serializerComponentParameterName})"))
                         {
                             var serializerCalls = component.Fields
                                 .Where(field => field.IsTransient == false)
-                                .Select(field => $"serializer.Write<\"{field.Name}\">({serializerComponentParameterName}.{field.Name})");
+                                .Select(field => $"serializer.write<\"{field.Name}\">({serializerComponentParameterName}.{field.Name})");
 
                             var serializerWritesCount = serializerCalls.Count();
                             if (serializerWritesCount == 0)
@@ -293,11 +293,11 @@ namespace Onyx.CodeGen.ComponentDSL
 
                         codeGenerator.AppendLine();
 
-                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::Deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
+                        using (codeGenerator.EnterScope($"bool Serialization<{componentTypeName}>::deserialize(const Deserializer& deserializer, {componentTypeName}& out{component.Name})"))
                         {
                             var deserializerCalls = component.Fields
                                 .Where(field => field.IsTransient == false)
-                                .Select(field => $"deserializer.Read<\"{field.Name}\">(out{component.Name}.{field.Name})");
+                                .Select(field => $"deserializer.read<\"{field.Name}\">(out{component.Name}.{field.Name})");
 
                             var serializerReadsCount = deserializerCalls.Count();
                             if (serializerReadsCount == 0)
@@ -352,7 +352,7 @@ namespace Onyx.CodeGen.ComponentDSL
                     using (codeGenerator.EnterClass($"struct PropertyInspector<{componentTypeName}>"))
                     {
                         //TODO: Add Visibility flag for attributes / components
-                        var drawSignature = $"static bool Draw({componentTypeName}& component, bool /*forceShow*/);";
+                        var drawSignature = $"static bool draw({componentTypeName}& component, bool /*forceShow*/);";
 
                         codeGenerator.Append(drawSignature);
                     }
@@ -393,7 +393,7 @@ namespace Onyx.CodeGen.ComponentDSL
                     }
 
                     var componentTypeName = component.FullyQualifiedName.TrimFullyQualifiedName(currentNamespace);
-                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{componentTypeName}>::Draw({componentTypeName}& component, bool /*forceShow*/)";
+                    var componentInspectorSignature = $"/*static*/ bool PropertyInspector<{componentTypeName}>::draw({componentTypeName}& component, bool /*forceShow*/)";
                     using (codeGenerator.EnterScope(componentInspectorSignature))
                     {
                         codeGenerator.Append("bool isModified = false;");
@@ -404,7 +404,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
                             if (field.GetAttribute<Tooltip>() is Tooltip tooltipAttribute)
                             {
-                                codeGenerator.Append($"property_grid::SetNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
+                                codeGenerator.Append($"property_grid::setNextPropertyTooltip(\"{tooltipAttribute.Value}\");");
                             }
 
                             // TODO: Add visibility check here

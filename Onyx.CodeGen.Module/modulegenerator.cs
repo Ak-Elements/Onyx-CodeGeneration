@@ -104,72 +104,72 @@ namespace Onyx.CodeGen.Module
             {
                 new ()
                 {
-                    FunctionName = "RegisterEngineSystems",
-                    RegisterFunction = "onyx::EngineSystemFactory::Register",
+                    FunctionName = "registerEngineSystems",
+                    RegisterFunction = "onyx::EngineSystemFactory::registerSystem",
                     Types = engineSystems,
                     AdditionalInclude = "onyx/engine/enginesystemfactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "RegisterAssets",
-                    RegisterFunction = "onyx::assets::AssetSystem::Register",
+                    FunctionName = "registerAssets",
+                    RegisterFunction = "onyx::assets::AssetSystem::registerAsset",
                     Types = assets,
                     AdditionalInclude = "onyx/assets/assetsystem.h"
                 },
 
                 new ()
                 {
-                    FunctionName = "RegisterSerializers", 
-                    RegisterFunction = "onyx::assets::AssetSystem::Register", 
+                    FunctionName = "registerSerializers", 
+                    RegisterFunction = "onyx::assets::AssetSystem::registerSerializer", 
                     Types = serializers, 
                     AdditionalInclude = "onyx/assets/assetsystem.h" },
 
                 new ()
                 {
-                    FunctionName = "RegisterGraphNodes", 
-                    RegisterFunction = "onyx::node_graph::NodeGraphFactory::Register", 
+                    FunctionName = "registerGraphNodes", 
+                    RegisterFunction = "onyx::node_graph::NodeGraphFactory::registerNode", 
                     Types = nodeGraphNodes, 
                     AdditionalInclude = "onyx/nodegraph/nodegraphfactory.h" },
 
                 new ()
                 {
-                    FunctionName = "RegisterShaderGraphNodes", 
-                    RegisterFunction = "onyx::graphics::ShaderGraphNodeFactory::Register", 
+                    FunctionName = "registerShaderGraphNodes", 
+                    RegisterFunction = "onyx::graphics::ShaderGraphNodeFactory::registerNode", 
                     Types = shaderGraphNodes, 
                     AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" 
                 },
                 new ()
                 {
-                    FunctionName = "RegisterRenderGraphNodes", 
-                    RegisterFunction = "onyx::graphics::RenderGraphNodeFactory::Register", 
+                    FunctionName = "registerRenderGraphNodes", 
+                    RegisterFunction = "onyx::graphics::RenderGraphNodeFactory::registerNode", 
                     Types = renderGraphNodes, 
                     AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" 
                 },
                 new ()
                 {
-                    FunctionName = "RegisterInputBindings", 
-                    RegisterFunction = "onyx::input_actions::InputBindingsFactory::Register", 
+                    FunctionName = "registerInputBindings", 
+                    RegisterFunction = "onyx::input_actions::InputBindingsFactory::registerType", 
                     Types = inputBindings, 
                     AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "RegisterInputTriggers", 
-                    RegisterFunction = "onyx::input_actions::InputTriggersFactory::Register", 
+                    FunctionName = "registerInputTriggers", 
+                    RegisterFunction = "onyx::input_actions::InputTriggersFactory::registerType", 
                     Types = inputTriggers, 
                     AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h" 
                 },
                 new ()
                 {
-                    FunctionName = "RegisterInputModifiers", 
-                    RegisterFunction = "onyx::input_actions::InputModifiersFactory::Register", 
+                    FunctionName = "registerInputModifiers", 
+                    RegisterFunction = "onyx::input_actions::InputModifiersFactory::registerType", 
                     Types = inputModifiers, 
                     AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h" 
                 },
                 new ()
                 {
-                    FunctionName = "RegisterPropertyInspectors", 
-                    RegisterFunction = "onyx::ui::PropertyInspectors::Register", 
+                    FunctionName = "registerPropertyInspectors", 
+                    RegisterFunction = "onyx::ui::PropertyInspectors::registerInspector", 
                     Types = componentInspectors, 
                     AdditionalInclude = "onyx/ui/propertyinspector.h",
                     OverrideTypeName = (Type type) => 
@@ -194,7 +194,7 @@ namespace Onyx.CodeGen.Module
     
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
-                generator.Append("void Init();");
+                generator.Append("void init();");
             }
 
             var headerFile = Path.Join(outputPath, $"{moduleName}.gen.h");
@@ -255,7 +255,7 @@ namespace Onyx.CodeGen.Module
                 if (appendLine)
                     generator.AppendLine();
 
-                using (generator.EnterScope("void Init()"))
+                using (generator.EnterScope("void init()"))
                 {
                     generator.Append(generatedFunctionCalls.Select(functionCall => $"{functionCall}();"));
                 }
@@ -336,23 +336,23 @@ namespace Onyx.CodeGen.Module
 
             if (constructorParameters.IsNullOrEmpty())
             {
-                using (generator.EnterScope("static UniquePtr<IEngineSystem> Create(const EngineSystemCreateContext&)"))
+                using (generator.EnterScope("static UniquePtr<IEngineSystem> create(const EngineSystemCreateContext&)"))
                 {
-                    generator.Append($"return MakeUnique<{engineTypeName}>();");
+                    generator.Append($"return makeUnique<{engineTypeName}>();");
                 }
             }
             else
             {
                 outIncludes.AddRange(constructorParameters);
 
-                using (generator.EnterScope("static UniquePtr<IEngineSystem> Create(const EngineSystemCreateContext& context)"))
-                using (generator.EnterMultilineFunctionCall($"return MakeUnique<{engineTypeName}>"))
+                using (generator.EnterScope("static UniquePtr<IEngineSystem> create(const EngineSystemCreateContext& context)"))
+                using (generator.EnterMultilineFunctionCall($"return makeUnique<{engineTypeName}>"))
                 {
                     var lastParameter = constructorParameters.Last();
                     foreach (var parameter in constructorParameters)
                     {
                         bool isLastParameter = lastParameter == parameter;
-                        generator.Append($"context.Get<{parameter.FullyQualifiedName.TrimFullyQualifiedName(namespaceStack)}>()" + (isLastParameter ? "" : ", "));
+                        generator.Append($"context.get<{parameter.FullyQualifiedName.TrimFullyQualifiedName(namespaceStack)}>()" + (isLastParameter ? "" : ", "));
                     }
                 }
             }
@@ -361,7 +361,7 @@ namespace Onyx.CodeGen.Module
         private void GenerateSystemUpdate(CodeGenerator generator, Type engineSystem, string engineTypeName, List<Type> outIncludes)
         {
             List<string> namespaceStack = new List<string>() { "onyx" };
-            var updateFunctions = engineSystem.GetFunctions("Update");
+            var updateFunctions = engineSystem.GetFunctions("update");
             if (updateFunctions.Any() == false)
                 return;
 
@@ -372,19 +372,19 @@ namespace Onyx.CodeGen.Module
             if (updateParameters.Any())
             {
                 outIncludes.AddRange(updateParameters);
-                using (generator.EnterScope($"static void Update(IEngineSystem& systemInstance, const EngineSystemUpdateContext& context)"))
+                using (generator.EnterScope($"static void update(IEngineSystem& systemInstance, const EngineSystemUpdateContext& context)"))
                 {
                     generator.Append($"{engineTypeName}& typedSystemInstance = static_cast<{engineTypeName}&>(systemInstance);");
 
                     if (updateParameters.Any())
                     {
-                        using (generator.EnterMultilineFunctionCall($"typedSystemInstance.Update"))
+                        using (generator.EnterMultilineFunctionCall($"typedSystemInstance.update"))
                         {
                             var lastParameter = updateParameters.Last();
                             foreach (var parameter in updateParameters)
                             {
                                 bool isLastParameter = lastParameter == parameter;
-                                generator.Append($"context.Get<{parameter.FullyQualifiedName.TrimFullyQualifiedName(namespaceStack)}>()" + (isLastParameter ? "" : ", "));
+                                generator.Append($"context.get<{parameter.FullyQualifiedName.TrimFullyQualifiedName(namespaceStack)}>()" + (isLastParameter ? "" : ", "));
                             }
                         }
                     }
@@ -392,10 +392,10 @@ namespace Onyx.CodeGen.Module
             }
             else
             {
-                using (generator.EnterScope($"static void Update(IEngineSystem& systemInstance, const EngineSystemUpdateContext&)"))
+                using (generator.EnterScope($"static void update(IEngineSystem& systemInstance, const EngineSystemUpdateContext&)"))
                 {
                     generator.Append($"{engineTypeName}& typedSystemInstance = static_cast<{engineTypeName}&>(systemInstance);");
-                    generator.Append("typedSystemInstance.Update();");
+                    generator.Append("typedSystemInstance.update();");
                 }
             }
         }

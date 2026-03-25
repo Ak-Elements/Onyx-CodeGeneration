@@ -121,9 +121,9 @@ namespace Onyx.CodeGen.CLI
             codeGenerator.AppendLine();
 
             using (codeGenerator.EnterScope("namespace onyx"))
-            using (codeGenerator.EnterScope("void Init()"))
+            using (codeGenerator.EnterScope("void init()"))
             {
-                var registerEngineModuleFunctions = allGlobalFunctions.Where(function => function.Name == "Init");
+                var registerEngineModuleFunctions = allGlobalFunctions.Where(function => function.Name == "init");
                 foreach (var function in registerEngineModuleFunctions)
                 {
                     string fullyQualifiedName = function.Namespace + "::" + function.Name;

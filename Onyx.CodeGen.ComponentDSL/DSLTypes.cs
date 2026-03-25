@@ -6,13 +6,12 @@ namespace Onyx.CodeGen.ComponentDSL
     {
         public static Dictionary<string, string> TYPE_TO_LITERAL_SUFFIX = new Dictionary<string, string>()
         {
-            { "onyxU8", "u" },
-            { "onyxU16", "u" },
-            { "onyxU32", "u" },
-            { "onyxU64", "ull" },
-            { "onyxU128", "ull" },
-            { "onyxF32", "f" },
-            { "onyxF64", "d"  },
+            { "uint8_t", "u" },
+            { "uint16_t", "u" },
+            { "uint32_t", "u" },
+            { "uint64_t", "ull" },
+            { "float32", "f" },
+            { "float64", "d"  },
             { "Vector2u8", "u" },
             { "Vector2u16", "u" },
             { "Vector2u32", "u" },
