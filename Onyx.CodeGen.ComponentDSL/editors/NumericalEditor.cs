@@ -8,13 +8,13 @@ namespace Onyx.CodeGen.ComponentDSL
             "uint32_t",
             "uint64_t",
             "onyxU128",
-            "onyxS8",
-            "onyxS16",
-            "onyxS32",
-            "onyxS64",
+            "int8_t",
+            "int16_t",
+            "int32_t",
+            "int64_t",
             "onyxS128",
-            "onyxF32",
-            "onyxF64",
+            "float32",
+            "float64",
             "Vector2u8",
             "Vector2u16",
             "Vector2u32",
@@ -104,6 +104,6 @@ namespace Onyx.CodeGen.ComponentDSL
 
                 codeGenerator.Append($"isModified |= {propertyGridCall};");
             }
-        }  
+        }
     }
 }

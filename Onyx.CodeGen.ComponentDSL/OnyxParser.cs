@@ -1,5 +1,5 @@
-using Onyx.CodeGen.TreeSitter;
 using Onyx.CodeGen.Core;
+using Onyx.CodeGen.TreeSitter;
 
 namespace Onyx.CodeGen.ComponentDSL
 {
@@ -95,11 +95,12 @@ namespace Onyx.CodeGen.ComponentDSL
                     case "attribute_arguments":
                         foreach (var arg in child.children())
                         {
+                            var symbol = arg.current_symbol();
+                            if ((symbol == "(") || (symbol == ")"))
+                                continue;
+
                             //TODO: Do we want to actually parse the designated intializer
-                            if (arg.current_symbol() == "identifier" || arg.current_symbol() == "designated_initializer")
-                            {
-                                parameters.Add(arg.GetContent(source).ToString());
-                            }
+                            parameters.Add(arg.GetContent(source).ToString());
                         }
                         break;
                 }

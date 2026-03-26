@@ -1,5 +1,5 @@
-﻿using Onyx.CodeGen.Core;
-using System.Reflection.Emit;
+﻿using System.Reflection.Emit;
+using Onyx.CodeGen.Core;
 using Type = Onyx.CodeGen.Core.Type;
 
 namespace Onyx.CodeGen.Module
@@ -119,68 +119,68 @@ namespace Onyx.CodeGen.Module
 
                 new ()
                 {
-                    FunctionName = "registerSerializers", 
-                    RegisterFunction = "onyx::assets::AssetSystem::registerSerializer", 
-                    Types = serializers, 
+                    FunctionName = "registerSerializers",
+                    RegisterFunction = "onyx::assets::AssetSystem::registerSerializer",
+                    Types = serializers,
                     AdditionalInclude = "onyx/assets/assetsystem.h" },
 
                 new ()
                 {
-                    FunctionName = "registerGraphNodes", 
-                    RegisterFunction = "onyx::node_graph::NodeGraphFactory::registerNode", 
-                    Types = nodeGraphNodes, 
+                    FunctionName = "registerGraphNodes",
+                    RegisterFunction = "onyx::node_graph::NodeGraphFactory::registerNode",
+                    Types = nodeGraphNodes,
                     AdditionalInclude = "onyx/nodegraph/nodegraphfactory.h" },
 
                 new ()
                 {
-                    FunctionName = "registerShaderGraphNodes", 
-                    RegisterFunction = "onyx::graphics::ShaderGraphNodeFactory::registerNode", 
-                    Types = shaderGraphNodes, 
-                    AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h" 
+                    FunctionName = "registerShaderGraphNodes",
+                    RegisterFunction = "onyx::graphics::ShaderGraphNodeFactory::registerNode",
+                    Types = shaderGraphNodes,
+                    AdditionalInclude = "onyx/graphics/shadergraph/shadergraphnodefactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "registerRenderGraphNodes", 
-                    RegisterFunction = "onyx::graphics::RenderGraphNodeFactory::registerNode", 
-                    Types = renderGraphNodes, 
-                    AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h" 
+                    FunctionName = "registerRenderGraphNodes",
+                    RegisterFunction = "onyx::graphics::RenderGraphNodeFactory::registerNode",
+                    Types = renderGraphNodes,
+                    AdditionalInclude = "onyx/graphics/rendergraph/rendergraphnodefactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "registerInputBindings", 
-                    RegisterFunction = "onyx::input_actions::InputBindingsFactory::registerType", 
-                    Types = inputBindings, 
+                    FunctionName = "registerInputBindings",
+                    RegisterFunction = "onyx::input_actions::InputBindingsFactory::registerType",
+                    Types = inputBindings,
                     AdditionalInclude = "onyx/inputactions/bindings/inputbindingsfactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "registerInputTriggers", 
-                    RegisterFunction = "onyx::input_actions::InputTriggersFactory::registerType", 
-                    Types = inputTriggers, 
-                    AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h" 
+                    FunctionName = "registerInputTriggers",
+                    RegisterFunction = "onyx::input_actions::InputTriggersFactory::registerType",
+                    Types = inputTriggers,
+                    AdditionalInclude = "onyx/inputactions/triggers/inputtriggersfactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "registerInputModifiers", 
-                    RegisterFunction = "onyx::input_actions::InputModifiersFactory::registerType", 
-                    Types = inputModifiers, 
-                    AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h" 
+                    FunctionName = "registerInputModifiers",
+                    RegisterFunction = "onyx::input_actions::InputModifiersFactory::registerType",
+                    Types = inputModifiers,
+                    AdditionalInclude = "onyx/inputactions/modifiers/inputmodifiersfactory.h"
                 },
                 new ()
                 {
-                    FunctionName = "registerPropertyInspectors", 
-                    RegisterFunction = "onyx::ui::PropertyInspectors::registerInspector", 
-                    Types = componentInspectors, 
+                    FunctionName = "registerPropertyInspectors",
+                    RegisterFunction = "onyx::ui::PropertyInspectors::registerInspector",
+                    Types = componentInspectors,
                     AdditionalInclude = "onyx/ui/propertyinspector.h",
-                    OverrideTypeName = (Type type) => 
+                    OverrideTypeName = (Type type) =>
                         {
                             if ( typeDatabase.ResolveTypeName(type.SpecializedTemplateParameters[0], moduleNamespaceStack) is Type componentType )
                                    return componentType.FullyQualifiedName;
-                            return type.SpecializedTemplateParameters[0]; 
-                        } 
+                            return type.SpecializedTemplateParameters[0];
+                        }
                 }
             };
-            
+
             var cppFile = GenerateModuleCpp(outPrivatePath, allArgumentTypes, engineSystems, register);
 
             generatedFiles.Add(headerFile);
@@ -191,7 +191,7 @@ namespace Onyx.CodeGen.Module
         private string GenerateModuleHeader(string outputPath)
         {
             CodeGenerator generator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER);
-    
+
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
                 generator.Append("void init();");
@@ -212,7 +212,7 @@ namespace Onyx.CodeGen.Module
             List<string> generatedFunctionCalls = new List<string>();
             List<string> generatedRegisterCodeBlocks = new List<string>();
             List<string> includes = new List<string>();
-            foreach (var registerData  in registerCreateData)
+            foreach (var registerData in registerCreateData)
             {
                 if (GenerateRegisterFunction(registerData, moduleNamespaceStack, generatedRegisterCodeBlocks, includes))
                 {
@@ -222,11 +222,11 @@ namespace Onyx.CodeGen.Module
 
             CodeGenerator generator = new CodeGenerator();
             generator.AddIncludes(includes);
-            generator.AddIncludes( systemIncludes.Select(type => type.IncludePath) );
-            generator.AddIncludes( allArguments.Select(type => type.IncludePath) );
+            generator.AddIncludes(systemIncludes.Select(type => type.IncludePath));
+            generator.AddIncludes(allArguments.Select(type => type.IncludePath));
 
             generator.AppendLine();
-            
+
             var systemCreationCodeLines = systemRegistrationCodeGen.GetCodeLines();
             if (systemCreationCodeLines.Any())
             {
@@ -235,7 +235,7 @@ namespace Onyx.CodeGen.Module
                     generator.Append(systemCreationCodeLines);
                 }
             }
-            
+
             using (generator.EnterScope($"namespace {string.Join("::", moduleNamespaceStack)}"))
             {
                 bool appendLine = false;
@@ -327,7 +327,7 @@ namespace Onyx.CodeGen.Module
             var constructor = engineSystem.GetConstructorsOrStaticCreate().FirstOrDefault();
 
             IEnumerable<Type> constructorParameters = Enumerable.Empty<Type>();
-           if (constructor.Parameters.IsNullOrEmpty() == false)
+            if (constructor.Parameters.IsNullOrEmpty() == false)
             {
                 constructorParameters = constructor.Parameters
                 .SelectMany(argument => typeDatabase.GetTypes().Where(s => s.FullyQualifiedName.EndsWith(argument.TypeName)))

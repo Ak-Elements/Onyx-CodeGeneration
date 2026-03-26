@@ -10,7 +10,7 @@ namespace Onyx.CodeGen.Core
         private ConcurrentBag<Function> globalFunctions = new ConcurrentBag<Function>();
 
         public IReadOnlyDictionary<string, Type> Types { get => types; }
-         
+
         public TypeDatabase(IEnumerable<string> modulePaths)
         {
             this.modulePaths = modulePaths;
@@ -63,7 +63,7 @@ namespace Onyx.CodeGen.Core
 
                 if (string.IsNullOrEmpty(aliasedTypeName))
                     continue;
-                    
+
                 Type? aliasedType = ResolveTypeName(aliasedTypeName, type.Namespace);
                 if (aliasedType == null)
                     continue;
@@ -141,15 +141,14 @@ namespace Onyx.CodeGen.Core
         private IReadOnlyList<string> ResolveFullInhertiance(Type type, Dictionary<string, List<string>> inheritanceCache)
         {
             List<string> baseClasses = type.Inherits.ToList();
-            List<string>? inheritanceChain;
             var fullyQualifiedName = type.FullyQualifiedName;
 
-            if (inheritanceCache.TryGetValue(fullyQualifiedName, out inheritanceChain))
+            if (inheritanceCache.TryGetValue(fullyQualifiedName, out List<string>? inheritanceChain))
             {
                 return inheritanceChain;
             }
 
-            inheritanceChain = new List<string> { };
+            inheritanceChain = [];
 
             Type? baseType;
             foreach (var baseClass in baseClasses)
@@ -159,8 +158,8 @@ namespace Onyx.CodeGen.Core
                 var templateParameters = "";
                 if (templateIndex != -1)
                 {
-                    strippedTemplate = baseClass[0..templateIndex];
-                    templateParameters = baseClass[(templateIndex + 1)..^1];
+                    strippedTemplate = baseClass[0..templateIndex].Trim();
+                    templateParameters = baseClass[(templateIndex + 1)..^1].Trim();
                 }
 
                 baseType = ResolveTypeName(strippedTemplate, type.Namespace);
@@ -215,7 +214,7 @@ namespace Onyx.CodeGen.Core
                         continue;
                     }
                 }
-                
+
                 // avoid endless recursion if the type inherits from itself but not using CRTP - this seems to be the case in a libstdc++ header
                 // TODO: investigate further and do a proper fix for the inheritance resolve 
                 if (baseType != type)
@@ -273,7 +272,7 @@ namespace Onyx.CodeGen.Core
         public List<Type> ResolveSpecializedTemplateTypes(string typeName, IEnumerable<string> namespaceContext)
         {
             List<Type> templateTypes = [];
-  
+
             var templateStartIndex = typeName.IndexOf('<') + 1;
             if (templateStartIndex == 0)
             {
