@@ -287,7 +287,7 @@ namespace Onyx.CodeGen.Core
             type.TypeIdentifier = "alias";
             type.AbsolutePath = filePath;
             type.IsAliased = true;
-            type.AliasedType = alisedType.ToString();
+            type.AliasedType = string.Concat(alisedType.ToString().Where(c => !Char.IsWhiteSpace(c)));
             type.IncludePath = PathExtension.GetShortestRelativePath(includeDirectories, filePath);
             type.SpecializedTemplateParameters = templateArguments.ToList();
         }
