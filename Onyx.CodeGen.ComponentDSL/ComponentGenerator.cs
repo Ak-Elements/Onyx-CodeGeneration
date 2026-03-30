@@ -15,7 +15,7 @@ namespace Onyx.CodeGen.ComponentDSL
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
 
-        bool hasEditorTarget;
+        bool hasToolsTarget;
 
         public ComponentGenerator(TypeDatabase typeDatabase,
             string moduleSourcePath,
@@ -25,7 +25,7 @@ namespace Onyx.CodeGen.ComponentDSL
             string outPrivatePath,
             string outEditorPublicPath,
             string outEditorPrivatePath,
-            bool hasEditorTarget,
+            bool hasToolsTarget,
             IEnumerable<string> includeDirectories,
             IEnumerable<string> moduleNamespaceStack
         )
@@ -43,7 +43,7 @@ namespace Onyx.CodeGen.ComponentDSL
             this.includeDirectories = includeDirectories;
             this.moduleNamespaceStack = moduleNamespaceStack;
 
-            this.hasEditorTarget = hasEditorTarget;
+            this.hasToolsTarget = hasToolsTarget;
         }
 
         public void Generate(string componentDefinitionPath, List<string> outGeneratedFiles, List<string> outGeneratedEditorFiles)
@@ -84,8 +84,8 @@ namespace Onyx.CodeGen.ComponentDSL
             CodeGenerator headerGenerator = new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER);
             CodeGenerator cppGenerator = new CodeGenerator();
 
-            CodeGenerator editorHeaderGenerator = hasEditorTarget ? new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER) : headerGenerator;
-            CodeGenerator editorCppGenerator = hasEditorTarget ? new CodeGenerator() : cppGenerator;
+            CodeGenerator editorHeaderGenerator = hasToolsTarget ? new CodeGenerator(CodeGenerator.AUTO_GENERATED_FILE_H_HEADER) : headerGenerator;
+            CodeGenerator editorCppGenerator = hasToolsTarget ? new CodeGenerator() : cppGenerator;
 
             headerGenerator.AddIncludes(componentHeaderIncludes);
             headerGenerator.Append(headerCodeLines);
@@ -104,7 +104,7 @@ namespace Onyx.CodeGen.ComponentDSL
             File.WriteAllText(headerPath, headerGenerator.GetCode());
             File.WriteAllText(cppPath, cppGenerator.GetCode());
 
-            if (hasEditorTarget)
+            if (hasToolsTarget)
             {
                 var editorHeaderFileName = $"{outFileName}inspector.gen.h";
                 var editorCppPath = Path.Join(outEditorPrivatePath, relativePath, $"{outFileName}inspector.gen.cpp");

@@ -17,11 +17,11 @@ namespace Onyx.CodeGen.CLI
         [DataMember(Name = "is_executable")]
         public bool IsExecutable { get; set; }
 
-        [DataMember(Name = "has_editor_target")]
-        public bool HasEditorTarget { get; set; }
+        [DataMember(Name = "has_tools_target")]
+        public bool HasToolsTarget { get; set; }
 
-        [DataMember(Name = "is_editor_target")]
-        public bool IsEditorTarget { get; set; } = false;
+        [DataMember(Name = "is_tools_target")]
+        public bool IsToolsTarget { get; set; } = false;
 
         [DataMember(Name = "source_files")]
         public List<string> Sources { get; set; } = new List<string>();
@@ -186,7 +186,7 @@ namespace Onyx.CodeGen.CLI
                 outPrivatePath,
                 editorBinaryPublicPath,
                 editorBinaryPrivatePath,
-                config.TargetConfig.HasEditorTarget,
+                config.TargetConfig.HasToolsTarget,
                 includeDirectories,
                 moduleNamespaceStack);
 

@@ -7,8 +7,6 @@ namespace Onyx.CodeGen.ComponentDSL
     {
         private string source = "";
         private string filePath = "";
-        private string generatedIncludePath = "";
-
         private TypeDatabase typeDatabase;
 
         private IEnumerable<string> includeDirectories = [];
