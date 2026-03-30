@@ -1,7 +1,7 @@
-﻿using Onyx.CodeGen.ComponentDSL;
+﻿using System.Runtime.Serialization;
+using Onyx.CodeGen.ComponentDSL;
 using Onyx.CodeGen.Core;
 using Onyx.CodeGen.Module;
-using System.Runtime.Serialization;
 using Type = Onyx.CodeGen.Core.Type;
 
 namespace Onyx.CodeGen.CLI
@@ -50,8 +50,8 @@ namespace Onyx.CodeGen.CLI
         [DataMember(Name = "generated_dir_suffix")]
         public string GeneratedDirectorySuffix { get; set; } = "generated";
 
-        [DataMember(Name = "editor_target_binary_dir")]
-        public string EditorTargetBinaryDir { get; set; } = string.Empty;
+        [DataMember(Name = "tools_target_binary_dir")]
+        public string ToolsTargetBinaryDir { get; set; } = string.Empty;
     }
 
     class Config
@@ -147,13 +147,13 @@ namespace Onyx.CodeGen.CLI
             string binaryDir = config.Paths.BinaryDirectory;
             string generatedPathSuffix = config.Paths.GeneratedDirectorySuffix;
             string namespacePathSuffix = config.Paths.NamespaceDirectorySuffix;
-            string editorBinaryDirPath = config.Paths.EditorTargetBinaryDir;
+            string toolsBinaryDirPath = config.Paths.ToolsTargetBinaryDir;
 
             var outPublicPath = Path.Join(binaryDir, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
             var outPrivatePath = Path.Join(binaryDir, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
 
-            var editorBinaryPublicPath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
-            var editorBinaryPrivatePath = string.IsNullOrWhiteSpace(editorBinaryDirPath) ? "" : Path.Join(editorBinaryDirPath, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
+            var toolsBinaryPublicPath = string.IsNullOrWhiteSpace(toolsBinaryDirPath) ? "" : Path.Join(toolsBinaryDirPath, generatedPathSuffix, "public", namespacePathSuffix).Replace('\\', '/');
+            var toolsBinaryPrivatePath = string.IsNullOrWhiteSpace(toolsBinaryDirPath) ? "" : Path.Join(toolsBinaryDirPath, generatedPathSuffix, "private", namespacePathSuffix).Replace('\\', '/');
 
             // output containing all files generated so consecutive runs can delete files that are no longer valid
             var generatedFilesPath = Path.Combine(binaryDir, "generatedfiles");
@@ -184,8 +184,8 @@ namespace Onyx.CodeGen.CLI
                 generatedPathSuffix,
                 outPublicPath,
                 outPrivatePath,
-                editorBinaryPublicPath,
-                editorBinaryPrivatePath,
+                toolsBinaryPublicPath,
+                toolsBinaryPrivatePath,
                 config.TargetConfig.HasToolsTarget,
                 includeDirectories,
                 moduleNamespaceStack);

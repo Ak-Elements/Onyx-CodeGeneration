@@ -9,8 +9,8 @@ namespace Onyx.CodeGen.ComponentDSL
         private string generatedPathSuffix;
         private string outPublicPath;
         private string outPrivatePath;
-        private string outEditorPublicPath;
-        private string outEditorPrivatePath;
+        private string outToolsPublicPath;
+        private string outToolsPrivatePath;
         private IEnumerable<string> includeDirectories;
         private IEnumerable<string> moduleNamespaceStack;
         private TypeDatabase typeDatabase;
@@ -23,8 +23,8 @@ namespace Onyx.CodeGen.ComponentDSL
             string generatedPathSuffix,
             string outPublicPath,
             string outPrivatePath,
-            string outEditorPublicPath,
-            string outEditorPrivatePath,
+            string outToolsPublicPath,
+            string outToolsPrivatePath,
             bool hasToolsTarget,
             IEnumerable<string> includeDirectories,
             IEnumerable<string> moduleNamespaceStack
@@ -37,8 +37,8 @@ namespace Onyx.CodeGen.ComponentDSL
 
             this.outPublicPath = outPublicPath;
             this.outPrivatePath = outPrivatePath;
-            this.outEditorPublicPath = outEditorPublicPath;
-            this.outEditorPrivatePath = outEditorPrivatePath;
+            this.outToolsPublicPath = outToolsPublicPath;
+            this.outToolsPrivatePath = outToolsPrivatePath;
 
             this.includeDirectories = includeDirectories;
             this.moduleNamespaceStack = moduleNamespaceStack;
@@ -107,8 +107,8 @@ namespace Onyx.CodeGen.ComponentDSL
             if (hasToolsTarget)
             {
                 var editorHeaderFileName = $"{outFileName}inspector.gen.h";
-                var editorCppPath = Path.Join(outEditorPrivatePath, relativePath, $"{outFileName}inspector.gen.cpp");
-                var editorHeaderPath = Path.Join(outEditorPublicPath, relativePath, editorHeaderFileName);
+                var editorCppPath = Path.Join(outToolsPrivatePath, relativePath, $"{outFileName}inspector.gen.cpp");
+                var editorHeaderPath = Path.Join(outToolsPublicPath, relativePath, editorHeaderFileName);
 
                 var editorHeaderIncludePath = Path.Join(namespacePathSuffix, relativePath, editorHeaderFileName).Replace('\\', '/');
 
