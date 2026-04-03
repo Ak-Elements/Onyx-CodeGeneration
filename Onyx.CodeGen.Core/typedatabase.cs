@@ -162,6 +162,16 @@ namespace Onyx.CodeGen.Core
                     templateParameters = baseClass[(templateIndex + 1)..^1].Trim();
                 }
 
+                if( type is TemplateType templateType )
+                {
+                    bool isDerivedFromTemplateArg = templateType.TemplateParameters.Contains( baseClass ) && templateType.IsDerivedFrom( baseClass );
+                    if( isDerivedFromTemplateArg )
+                    {
+                        inheritanceChain.Add( baseClass );
+                        continue;
+                    }
+                }
+
                 baseType = ResolveTypeName(strippedTemplate, type.Namespace);
                 if (baseType == null)
                 {

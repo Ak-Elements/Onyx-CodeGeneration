@@ -245,7 +245,8 @@ namespace Onyx.CodeGen.ComponentDSL
             List<string> initializerList = [];
             foreach (var child in cursor.children())
             {
-                if (child.current_node().is_named() == false)
+                bool isNamed = child.current_node().is_named();
+                if (isNamed == false)
                     continue;
 
                 var argument = child.GetContent(source).ToString();

@@ -113,6 +113,7 @@ namespace Onyx.CodeGen.TreeSitter
         * was found.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_node_is_null(TSNode node);
 
         /**
@@ -121,6 +122,8 @@ namespace Onyx.CodeGen.TreeSitter
         * grammar.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+
         private static extern bool ts_node_is_named(TSNode node);
 
         /**
@@ -128,6 +131,8 @@ namespace Onyx.CodeGen.TreeSitter
         * order to recover from certain kinds of syntax errors.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+
         private static extern bool ts_node_is_missing(TSNode node);
 
         /**
@@ -135,18 +140,21 @@ namespace Onyx.CodeGen.TreeSitter
         * which are not required the grammar, but can appear anywhere.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_node_is_extra(TSNode node);
 
         /**
         * Check if a syntax node has been edited.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_node_has_changes(TSNode node);
 
         /**
         * Check if the node is a syntax error or contains any syntax errors.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_node_has_error(TSNode node);
 
         /**
@@ -262,6 +270,7 @@ namespace Onyx.CodeGen.TreeSitter
         * Check if two nodes are identical.
         */
         [DllImport("tree-sitter", CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         private static extern bool ts_node_eq(TSNode node1, TSNode node2);
         #endregion
     }
