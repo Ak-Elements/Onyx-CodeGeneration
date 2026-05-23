@@ -44,7 +44,11 @@ namespace Onyx.CodeGen.ComponentDSL
             "Vector4s32",
             "Vector4s64",
             "Vector4f32",
-            "Vector4f64")
+            "Vector4f64",
+            "EulerRadiansF32",
+            "EulerRadiansF64",
+            "EulerDegreesF32",
+            "EulerDegreesF64")
     ]
     internal class NumericalEditor : IFieldEditor
     {
@@ -81,18 +85,31 @@ namespace Onyx.CodeGen.ComponentDSL
 
             if (field.GetAttribute<UnitAttribute>() is UnitAttribute unitAttribute)
             {
-                using (codeGenerator.EnterScope())
+                if (string.IsNullOrWhiteSpace(unitAttribute.Unit))
                 {
-                    codeGenerator.Append($"auto displayUnit = quantityCast<units::ratios::{unitAttribute.DisplayUnit}, units::ratios::{unitAttribute.Unit}>({fieldName});");
-
                     var propertyGridCall = numericOptions.Any() ?
-                        $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
-                        $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit)";
+                        $"property_grid::drawProperty<units::ratios::{unitAttribute.DisplayUnit}>(\"{field.DisplayName}\", {fieldName} {{ {string.Join(", ", numericOptions)} }} )" :
+                        $"property_grid::drawProperty<units::ratios::{unitAttribute.DisplayUnit}>(\"{field.DisplayName}\", {fieldName} )";
 
-                    using (codeGenerator.EnterScope($"if( {propertyGridCall} )"))
+                    codeGenerator.Append($"isModified |= {propertyGridCall};");
+                }
+                else
+                {
+                    using (codeGenerator.EnterScope())
                     {
-                        codeGenerator.Append($"{fieldName} = quantityCast<units::ratios::{unitAttribute.Unit}, units::ratios::{unitAttribute.DisplayUnit}>(displayUnit);");
-                        codeGenerator.Append($"isModified = true;");
+                        // if no storage unit is provided the attribute has to be a Quantity type itself
+
+                        codeGenerator.Append($"auto displayUnit = quantityCast<units::ratios::{unitAttribute.DisplayUnit}, units::ratios::{unitAttribute.Unit}>({fieldName});");
+
+                        var propertyGridCall = numericOptions.Any() ?
+                            $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit, {{ {string.Join(", ", numericOptions)} }} )" :
+                            $"property_grid::drawProperty(\"{field.DisplayName}\", displayUnit)";
+
+                        using (codeGenerator.EnterScope($"if( {propertyGridCall} )"))
+                        {
+                            codeGenerator.Append($"{fieldName} = quantityCast<units::ratios::{unitAttribute.Unit}, units::ratios::{unitAttribute.DisplayUnit}>(displayUnit);");
+                            codeGenerator.Append($"isModified = true;");
+                        }
                     }
                 }
             }
