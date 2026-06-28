@@ -210,8 +210,7 @@ namespace Onyx.CodeGen.Core
 
                 var classContent = GetNodeContent(cursor.current_node());
 
-                //TODO: not ideal and maybe makes more sense to actually parse the function def, but this seems simpler for now
-                bool hasTypeId = classContent.IndexOf("StringId32 GetTypeId() const".AsSpan()) != -1 && classContent.IndexOf("static constexpr StringId32 TypeId".AsSpan()) != -1;
+                bool hasTypeId = classContent.IndexOf("static constexpr StringId32 TypeId".AsSpan()) != -1;
 
                 string namespaceStr = string.Join("::", currentNamespace);
                 var fullyQualifiedName = string.IsNullOrEmpty(namespaceStr) ? name : namespaceStr + "::" + name;
