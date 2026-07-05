@@ -330,7 +330,7 @@ namespace Onyx.CodeGen.ComponentDSL
         {
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
 
-            outIncludes.Add("onyx/ui/propertyinspector.h");
+            outIncludes.Add("onyx/ui/propertygrid/propertyinspector.h");
 
             IEnumerable<string> currentNamespace = ["onyx", "ui"];
             using (codeGenerator.EnterScope("namespace onyx::ui"))
@@ -367,7 +367,7 @@ namespace Onyx.CodeGen.ComponentDSL
 
         private IEnumerable<string> GenerateComponentInspectorCpp(IReadOnlyList<Component> components, List<string> outEditorIncludes)
         {
-            outEditorIncludes.Add("onyx/ui/propertygrid.h");
+            outEditorIncludes.Add("onyx/ui/propertygrid/propertygrid.h");
 
             CodeGenerator codeGenerator = new CodeGenerator(string.Empty);
             IEnumerable<string> currentNamespace = ["onyx", "ui"];
