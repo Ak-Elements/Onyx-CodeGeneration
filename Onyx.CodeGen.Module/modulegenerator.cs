@@ -171,7 +171,7 @@ namespace Onyx.CodeGen.Module
                     FunctionName = "registerPropertyInspectors",
                     RegisterFunction = "onyx::ui::PropertyInspectors::registerInspector",
                     Types = componentInspectors,
-                    AdditionalInclude = "onyx/ui/propertyinspector.h",
+                    AdditionalInclude = "onyx/ui/propertygrid/propertyinspector.h",
                     OverrideTypeName = (Type type) =>
                         {
                             if ( typeDatabase.ResolveTypeName(type.SpecializedTemplateParameters[0], moduleNamespaceStack) is Type componentType )
