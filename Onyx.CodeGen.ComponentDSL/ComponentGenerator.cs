@@ -181,7 +181,7 @@ namespace Onyx.CodeGen.ComponentDSL
                 }
 
                 codeGenerator.Append($"static constexpr StringId32 TypeId {{ \"{component.FullyQualifiedName}\" }};");
-                codeGenerator.Append("StringId32 GetTypeId() const { return TypeId; }");
+                codeGenerator.Append("[[nodiscard]] static StringId32 getTypeId() { return TypeId; }");
                 codeGenerator.AppendLine();
 
                 // TODO: Group fields based on their build type / editor only
