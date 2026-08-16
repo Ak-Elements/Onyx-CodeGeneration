@@ -280,14 +280,9 @@ namespace Onyx.CodeGen.ComponentDSL
                             }
                             else
                             {
-                                codeGenerator.Append($"return {serializerCalls.First()} ||");
-
-                                using (codeGenerator.Indent())
-                                {
-                                    codeGenerator.Append(serializerCalls.Skip(1).SkipLast(1).Select(serializerCall => $"{serializerCall} ||"));
-                                    codeGenerator.Append($"{serializerCalls.Last()};");
-                                }
-
+                                codeGenerator.Append($"bool success = true;");
+                                codeGenerator.Append(serializerCalls.Select(serializerCall => $"success &= {serializerCall};"));
+                                codeGenerator.Append($"return success;");
                             }
                         }
 
@@ -310,13 +305,9 @@ namespace Onyx.CodeGen.ComponentDSL
                             }
                             else
                             {
-                                codeGenerator.Append($"return {deserializerCalls.First()} ||");
-
-                                using (codeGenerator.Indent())
-                                {
-                                    codeGenerator.Append(deserializerCalls.Skip(1).SkipLast(1).Select(deserializerCall => $"{deserializerCall} ||"));
-                                    codeGenerator.Append($"{deserializerCalls.Last()};");
-                                }
+                                codeGenerator.Append($"bool success = true;");
+                                codeGenerator.Append(deserializerCalls.Select(deserializerCall => $"success &= {deserializerCall};"));
+                                codeGenerator.Append($"return success;");
                             }
                         }
                     }
